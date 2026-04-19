@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Cho phép HTTP (không mã hóa) tới máy XAMPP trong mạng nội bộ.
+        Thay IP bên dưới bằng địa chỉ IP thật của máy tính chạy XAMPP.
+        Android 9+ chặn HTTP mặc định — file này gỡ bỏ hạn chế đó cho IP cụ thể.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Máy ảo (emulator) kết nối localhost qua IP đặc biệt này -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Thiết bị thật trong LAN: thay bằng IP PC của bạn -->
+        <domain includeSubdomains="true">192.168.1.100</domain>
+    </domain-config>
+</network-security-config>

@@ -14,7 +14,7 @@
 5. [Bật mod_rewrite](#5-bật-mod_rewrite)
 6. [Kiểm tra API hoạt động](#6-kiểm-tra-api-hoạt-động)
 7. [Chạy website khách hàng](#7-chạy-website-khách-hàng)
-8. [Kết nối Android app](#8-kết-nối-android-app)
+8. [Build và chạy Android app](#8-build-và-chạy-android-app)
 9. [Đổi mật khẩu admin](#9-đổi-mật-khẩu-admin)
 10. [Upload lên VPS sau này](#10-upload-lên-vps-sau-này)
 11. [Xử lý lỗi thường gặp](#11-xử-lý-lỗi-thường-gặp)
@@ -224,50 +224,78 @@ Sẽ thấy dashboard với:
 
 ---
 
-## 8. Kết nối Android app
+## 8. Build và chạy Android app
 
-### Trên thiết bị thật (cùng mạng WiFi)
+> App Android cần được **build từ source code** bằng Android Studio.  
+> Không có file APK sẵn — bạn tự build để điều chỉnh IP server cho phù hợp.
 
-1. Tìm địa chỉ IP máy tính:
-   - **Windows:** mở CMD → `ipconfig` → tìm `IPv4 Address` (vd: `192.168.1.100`)
-   - **Mac/Linux:** `ifconfig | grep inet`
+### Bước 1 — Cài Android Studio
 
-2. Mở file `app/src/main/java/com/loyalte/app/util/AppConfig.kt`:
-   ```kotlin
-   const val BASE_URL = "http://192.168.1.100/loyalteapp/backend/api/"
-   //                           ^^ thay bằng IP máy tính của bạn
-   ```
+Tải tại: https://developer.android.com/studio  
+_(chọn bản mới nhất, cài đặt bình thường, bao gồm Android SDK)_
 
-3. Đảm bảo thiết bị Android kết nối cùng mạng WiFi với máy tính
+### Bước 2 — Mở dự án
 
-4. **Quan trọng:** Thêm Network Security Config vì HTTP (không phải HTTPS):
+1. Mở Android Studio → **"Open"** → chọn thư mục gốc của dự án (`LoyalteApp/`)
+2. Chờ Gradle sync xong _(lần đầu có thể mất 5-10 phút tải thư viện)_
 
-   Tạo file `app/src/main/res/xml/network_security_config.xml`:
-   ```xml
-   <?xml version="1.0" encoding="utf-8"?>
-   <network-security-config>
-       <domain-config cleartextTrafficPermitted="true">
-           <domain includeSubdomains="true">192.168.1.100</domain>
-       </domain-config>
-   </network-security-config>
-   ```
+### Bước 3 — Cập nhật địa chỉ server
 
-   Thêm vào `AndroidManifest.xml` trong thẻ `<application>`:
-   ```xml
-   android:networkSecurityConfig="@xml/network_security_config"
-   ```
+Mở file: `app/src/main/java/com/loyalte/app/util/AppConfig.kt`
 
-### Trên máy ảo Android (Emulator)
-
-Emulator có thể dùng IP đặc biệt để kết nối với localhost:
 ```kotlin
-const val BASE_URL = "http://10.0.2.2/loyalteapp/backend/api/"
+object AppConfig {
+    // ── Máy ảo Android (Emulator) ──────────────────────────────────────────
+    // 10.0.2.2 là địa chỉ đặc biệt trỏ tới localhost của máy tính
+    const val BASE_URL = "http://10.0.2.2/loyalteapp/backend/api/"
+
+    // ── Thiết bị thật (điện thoại/tablet cùng WiFi) ─────────────────────────
+    // Bỏ comment dòng dưới và thay IP bằng IP máy tính bạn (xem bước 3b)
+    // const val BASE_URL = "http://192.168.1.100/loyalteapp/backend/api/"
+}
 ```
-_(10.0.2.2 là alias của localhost trong Android emulator — đã được đặt sẵn trong AppConfig.kt)_
+
+**Tìm IP máy tính (cho thiết bị thật):**
+- **Windows:** mở CMD → gõ `ipconfig` → tìm dòng `IPv4 Address`
+- **Mac:** mở Terminal → gõ `ipconfig getifaddr en0`
+- **Linux:** gõ `hostname -I`
+
+### Bước 4 — Cập nhật IP trong network_security_config.xml
+
+File này đã có sẵn tại `app/src/main/res/xml/network_security_config.xml`.  
+Nếu dùng thiết bị thật, mở file và thay `192.168.1.100` bằng IP thật của máy:
+
+```xml
+<domain includeSubdomains="true">192.168.1.100</domain>
+```
+
+> File `AndroidManifest.xml` đã được cấu hình sẵn để dùng file này — không cần chỉnh thêm.
+
+### Bước 5 — Build và cài app
+
+**Cách A — Chạy trên máy ảo (đơn giản nhất để test):**
+
+1. Android Studio → thanh toolbar → click icon **AVD Manager** (hình điện thoại + dấu cộng)
+2. Tạo một thiết bị ảo: chọn **Pixel 6** → API 30 trở lên → **Finish**
+3. Click nút ▶ **Run** (hoặc `Shift+F10`) → chọn máy ảo vừa tạo
+4. App sẽ tự cài và mở
+
+**Cách B — Cài trực tiếp lên điện thoại thật:**
+
+1. Trên điện thoại Android: vào **Cài đặt → Thông tin điện thoại** → tap "Số hiệu bản dựng" **7 lần** để bật Developer Mode
+2. Vào **Cài đặt → Tùy chọn nhà phát triển** → bật **USB Debugging**
+3. Cắm cáp USB vào máy tính → chấp nhận popup "Allow USB debugging"
+4. Android Studio sẽ nhận ra thiết bị → click ▶ **Run**
+
+**Cách C — Xuất file APK để cài thủ công:**
+
+1. Android Studio → menu **Build → Build Bundle(s) / APK(s) → Build APK(s)**
+2. Chờ build xong → click **"locate"** trong thông báo để tìm file APK
+3. Copy file APK sang điện thoại → mở để cài (cần bật "Cài từ nguồn không rõ")
 
 ### Đăng nhập staff trên Android
 
-Tài khoản mặc định:
+Sau khi app mở, dùng tài khoản mặc định:
 - **Email:** `admin@loyalte.app`
 - **Password:** `admin123`
 
@@ -397,7 +425,21 @@ const val BASE_URL = "https://yourdomain.com/loyalteapp/backend/api/"
 **Giải pháp:**
 1. Kiểm tra IP trong `AppConfig.kt` đúng chưa
 2. Ping thử từ điện thoại: mở trình duyệt trên điện thoại → truy cập `http://192.168.x.x/loyalteapp/backend/api/rewards`
-3. Thêm Network Security Config (Bước 8) — bắt buộc từ Android 9 trở lên
+3. Kiểm tra `network_security_config.xml` có đúng IP chưa — bắt buộc từ Android 9 trở lên
+
+---
+
+### Lỗi Gradle khi build trong Android Studio
+
+**"SDK location not found"**
+- Android Studio → **File → Project Structure → SDK Location** → chỉ đúng đường dẫn Android SDK
+
+**"Gradle sync failed" / "Could not resolve..."**
+- Kiểm tra internet (Gradle cần tải thư viện lần đầu)
+- Android Studio → **File → Invalidate Caches → Invalidate and Restart**
+
+**"Minimum supported Gradle version is..."**
+- Android Studio → **Help → Check for Updates** → cập nhật lên phiên bản mới nhất
 
 ---
 
