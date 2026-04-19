@@ -1,6 +1,7 @@
 package com.loyalte.app.presentation.navigation
 
 sealed class Screen(val route: String) {
+    object StaffLogin : Screen("staff_login")
     object Home : Screen("home")
     object QrScan : Screen("qr_scan")
 
