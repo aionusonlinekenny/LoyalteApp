@@ -193,7 +193,7 @@ fun StaffLoginScreen(
 
             Spacer(Modifier.height(24.dp))
             Text(
-                text = "Staff accounts are created by the administrator\nin the Firebase Console.",
+                text = "Staff accounts are managed by the administrator.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

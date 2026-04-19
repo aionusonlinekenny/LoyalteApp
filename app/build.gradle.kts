@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.google.services)
 }
 
 android {
@@ -104,12 +103,15 @@ dependencies {
     // Accompanist Permissions
     implementation(libs.accompanist.permissions)
 
-    // Firebase — version controlled by BOM
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.auth.ktx)
-    // Coroutines adapter for Firebase Tasks
-    implementation(libs.coroutines.play.services)
+    // Retrofit + OkHttp (replaces Firebase Firestore)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.core)
+    implementation(libs.okhttp.logging)
+    implementation(libs.gson)
+
+    // DataStore (token persistence, replaces Firebase Auth)
+    implementation(libs.datastore.preferences)
 
     // Testing
     testImplementation(libs.junit)

@@ -2,7 +2,9 @@ package com.loyalte.app.presentation.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.loyalte.app.data.local.prefs.AuthPreferences
+import com.loyalte.app.data.remote.api.LoyalteApiService
+import com.loyalte.app.data.remote.api.dto.LoginRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,12 +13,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
 class StaffLoginViewModel @Inject constructor(
-    private val auth: FirebaseAuth
+    private val api: LoyalteApiService,
+    private val authPreferences: AuthPreferences
 ) : ViewModel() {
 
     data class UiState(
@@ -43,7 +45,7 @@ class StaffLoginViewModel @Inject constructor(
         _uiState.update { it.copy(password = value, errorMessage = null) }
 
     fun signIn() {
-        val email = _uiState.value.email.trim()
+        val email    = _uiState.value.email.trim()
         val password = _uiState.value.password
 
         if (email.isBlank() || password.isBlank()) {
@@ -54,19 +56,27 @@ class StaffLoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                auth.signInWithEmailAndPassword(email, password).await()
-                _uiState.update { it.copy(isLoading = false) }
-                _events.emit(Event.LoginSuccess)
+                val response = api.login(LoginRequest(email, password))
+                val body     = response.body()
+
+                if (response.isSuccessful && body?.success == true && body.token != null) {
+                    authPreferences.saveToken(body.token, body.expiresAt ?: Long.MAX_VALUE)
+                    _uiState.update { it.copy(isLoading = false) }
+                    _events.emit(Event.LoginSuccess)
+                } else {
+                    val msg = body?.message ?: when (response.code()) {
+                        401  -> "Invalid email or password"
+                        else -> "Login failed. Please try again."
+                    }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = when {
-                            e.message?.contains("password") == true -> "Incorrect password"
-                            e.message?.contains("user") == true -> "Account not found"
-                            e.message?.contains("network") == true -> "Network error. Check connection."
-                            else -> "Login failed. Please try again."
-                        }
+                        errorMessage = if (e.message?.contains("Unable to resolve host") == true ||
+                            e.message?.contains("connect") == true
+                        ) "Network error. Check connection." else "Login failed. Please try again."
                     )
                 }
             }
