@@ -4,6 +4,7 @@ sealed class Screen(val route: String) {
     object StaffLogin : Screen("staff_login")
     object Home : Screen("home")
     object QrScan : Screen("qr_scan")
+    object AddCustomer : Screen("add_customer")
 
     object CustomerProfile : Screen("customer_profile/{customerId}") {
         const val ARG_CUSTOMER_ID = "customerId"

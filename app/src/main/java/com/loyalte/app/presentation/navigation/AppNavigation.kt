@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.loyalte.app.data.local.prefs.AuthPreferences
 import com.loyalte.app.presentation.screens.auth.StaffLoginScreen
+import com.loyalte.app.presentation.screens.customer.AddCustomerScreen
 import com.loyalte.app.presentation.screens.customer.CustomerProfileScreen
 import com.loyalte.app.presentation.screens.home.HomeScreen
 import com.loyalte.app.presentation.screens.rewards.RewardsScreen
@@ -40,7 +41,21 @@ fun AppNavigation(navController: NavHostController, authPreferences: AuthPrefere
                 },
                 onScanQr = {
                     navController.navigate(Screen.QrScan.route)
+                },
+                onAddCustomer = {
+                    navController.navigate(Screen.AddCustomer.route)
                 }
+            )
+        }
+
+        composable(Screen.AddCustomer.route) {
+            AddCustomerScreen(
+                onCustomerCreated = { customerId ->
+                    navController.navigate(Screen.CustomerProfile.createRoute(customerId)) {
+                        popUpTo(Screen.AddCustomer.route) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 
