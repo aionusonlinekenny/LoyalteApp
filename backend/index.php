@@ -9,11 +9,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Parse path: strip leading /api/
+// Parse path: find /api/ anywhere in the URI and take everything after it
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$uri    = preg_replace('#^/[^/]+/api/#', '', $uri);  // strip basepath + /api/
-$uri    = trim($uri, '/');
-$parts  = explode('/', $uri);
+$apiPos = strpos($uri, '/api/');
+if ($apiPos === false) {
+    json_error('Not found', 404);
+}
+$uri      = trim(substr($uri, $apiPos + 5), '/'); // skip past '/api/'
+$parts    = explode('/', $uri);
 $resource = $parts[0] ?? '';
 $id       = $parts[1] ?? null;
 $sub      = $parts[2] ?? null;
