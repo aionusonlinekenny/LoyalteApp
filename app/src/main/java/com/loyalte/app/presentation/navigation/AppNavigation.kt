@@ -48,7 +48,7 @@ fun AppNavigation(navController: NavHostController, authPreferences: AuthPrefere
     val isLoggedIn by authPreferences.isLoggedIn().collectAsState(initial = false)
     val startDestination = if (isLoggedIn) Screen.Home.route else Screen.StaffLogin.route
 
-    val drawerState = rememberDrawerState(DrawerState(DrawerValue.Closed))
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
