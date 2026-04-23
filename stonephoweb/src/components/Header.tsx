@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Utensils } from 'lucide-react';
+import { Menu, X, Utensils, Star } from 'lucide-react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 
@@ -97,6 +97,14 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                 {item.name}
               </button>
             ))}
+            {/* Loyalty button — always visible */}
+            <a
+              href="#loyalty"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold bg-yellow-400 hover:bg-yellow-500 text-white transition-all duration-300 shadow-sm"
+            >
+              <Star className="w-4 h-4 fill-white" />
+              Loyalty
+            </a>
           </nav>
 
           {/* Mobile menu button */}
@@ -144,6 +152,15 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                   {item.name}
                 </button>
               ))}
+              {/* Loyalty button — mobile */}
+              <a
+                href="#loyalty"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold bg-yellow-400 hover:bg-yellow-500 text-white transition-all duration-300"
+              >
+                <Star className="w-4 h-4 fill-white" />
+                Loyalty — Tích điểm
+              </a>
             </nav>
           </div>
         )}

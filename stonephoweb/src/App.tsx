@@ -10,11 +10,13 @@ import Menu from './components/Menu';
 import Gallery from './components/Gallery';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import LoyaltySection from './loyalty/LoyaltySection';
 
 function App() {
   const deviceInfo = useDeviceDetection();
   const [forcedDevice, setForcedDevice] = useState<'mobile' | 'tablet' | 'desktop' | null>(null);
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showAdmin, setShowAdmin]     = useState(false);
+  const [showLoyalty, setShowLoyalty] = useState(false);
 
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -31,8 +33,13 @@ function App() {
 
       if (path.includes('/admin') || hash.includes('#admin')) {
         setShowAdmin(true);
+        setShowLoyalty(false);
+      } else if (hash.includes('#loyalty')) {
+        setShowLoyalty(true);
+        setShowAdmin(false);
       } else {
         setShowAdmin(false);
+        setShowLoyalty(false);
       }
     };
 
@@ -79,12 +86,24 @@ function App() {
     return <AdminRoute />;
   }
 
-  // PRIORITY 2: Maintenance Mode
+  // PRIORITY 2: Loyalty Section
+  if (showLoyalty) {
+    return (
+      <LoyaltySection
+        onClose={() => {
+          window.location.hash = '';
+          setShowLoyalty(false);
+        }}
+      />
+    );
+  }
+
+  // PRIORITY 3: Maintenance Mode
   if (maintenanceMode) {
     return <MaintenanceMode />;
   }
 
-  // PRIORITY 3: Normal Website
+  // PRIORITY 4: Normal Website
   return (
     <div className="min-h-screen">
       <Header deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
