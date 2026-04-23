@@ -41,6 +41,11 @@ class RetrofitCustomerRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun updateCustomer(customer: Customer) {
+        // Full customer updates are not exposed via the current API;
+        // use updatePoints for point changes.
+    }
+
     override suspend fun updatePoints(customerId: String, newPoints: Int) {
         // Points updates go through the transactions or points endpoint;
         // direct point-setting is handled by the earn/redeem flows.
