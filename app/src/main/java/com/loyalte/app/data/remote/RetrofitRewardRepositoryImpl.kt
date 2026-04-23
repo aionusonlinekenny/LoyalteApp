@@ -16,28 +16,36 @@ class RetrofitRewardRepositoryImpl @Inject constructor(
     private val api: LoyalteApiService
 ) : RewardRepository {
 
-    override fun getActiveRewards(): Flow<List<Reward>> = flow {
-        val rewards = api.getActiveRewards().body()?.rewards?.map { it.toDomain() } ?: emptyList()
-        emit(rewards)
+    override fun getAllActiveRewards(): Flow<List<Reward>> = flow {
+        emit(api.getActiveRewards().body()?.rewards?.map { it.toDomain() } ?: emptyList())
     }
 
+    override fun getAllRewards(): Flow<List<Reward>> = getAllActiveRewards()
+
     override suspend fun getRewardById(id: String): Reward? {
-        val rewards = api.getActiveRewards().body()?.rewards ?: return null
-        return rewards.firstOrNull { it.id == id }?.toDomain()
+        return api.getActiveRewards().body()?.rewards?.firstOrNull { it.id == id }?.toDomain()
+    }
+
+    override suspend fun insertReward(reward: Reward) {
+        // Rewards are managed server-side.
     }
 
     override suspend fun insertRewards(rewards: List<Reward>) {
-        // Rewards are managed server-side; no local insert needed.
+        // Rewards are managed server-side.
+    }
+
+    override suspend fun updateReward(reward: Reward) {
+        // Rewards are managed server-side.
+    }
+
+    override fun getRedemptionsByCustomer(customerId: String): Flow<List<Redemption>> = flow {
+        emit(
+            api.getRedemptions(customerId).body()?.redemptions?.map { it.toDomain() } ?: emptyList()
+        )
     }
 
     override suspend fun insertRedemption(redemption: Redemption) {
         api.redeemReward(RedeemRequest(redemption.customerId, redemption.rewardId))
-    }
-
-    override fun getRedemptionsForCustomer(customerId: String): Flow<List<Redemption>> = flow {
-        val redemptions = api.getRedemptions(customerId).body()?.redemptions
-            ?.map { it.toDomain() } ?: emptyList()
-        emit(redemptions)
     }
 }
 
