@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ──────────────────────────────────────────────────────────
+    // Helper functions
+    // ──────────────────────────────────────────────────────────
+
+    // Staff = authenticated via email/password (Android app).
+    // The Android app uses Firebase Auth Email/Password for staff accounts.
+    function isStaff() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider == "password";
+    }
+
+    // Customer = authenticated via phone OTP (customer website).
+    function isCustomer() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider == "phone";
+    }
+
+    // True if the authenticated phone number matches this customer's phone field.
+    function ownsCustomerDoc(customerId) {
+      return isCustomer() &&
+        get(/databases/$(database)/documents/customers/$(customerId)).data.phone
+          == request.auth.token.phone_number;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // customers collection
+    // ──────────────────────────────────────────────────────────
+    match /customers/{customerId} {
+      // Staff can do anything
+      allow read, write: if isStaff();
+      // Customers can only read their own document
+      allow read: if isCustomer() &&
+        resource.data.phone == request.auth.token.phone_number;
+
+      // transactions subcollection
+      match /transactions/{txId} {
+        allow read, write: if isStaff();
+        allow read: if ownsCustomerDoc(customerId);
+      }
+
+      // redemptions subcollection
+      match /redemptions/{redemptionId} {
+        allow read, write: if isStaff();
+        allow read: if ownsCustomerDoc(customerId);
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // rewards collection  (public read for authenticated users)
+    // ──────────────────────────────────────────────────────────
+    match /rewards/{rewardId} {
+      allow read:  if request.auth != null;   // any signed-in user can browse rewards
+      allow write: if isStaff();
+    }
+  }
+}

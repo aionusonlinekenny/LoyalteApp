@@ -1,0 +1,26 @@
+<?php
+header('Content-Type: application/json');
+$configFile = __DIR__ . '/hero-config.json';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input || !isset($input['background'])) {
+        echo json_encode(["success" => false, "error" => "No background provided"]);
+        exit;
+    }
+    $config = [
+        "background" => $input['background'],
+        "lastUpdated" => date('Y-m-d H:i:s')
+    ];
+    file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
+    echo json_encode(["success" => true, "config" => $config]);
+    exit;
+}
+if (file_exists($configFile)) {
+    $config = json_decode(file_get_contents($configFile), true);
+    echo json_encode(["success" => true, "config" => $config]);
+} else {
+    echo json_encode(["success" => true, "config" => [
+        "background" => "https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop",
+        "lastUpdated" => date('Y-m-d H:i:s')
+    ]]);
+}

@@ -1,0 +1,396 @@
+{
+    "items": [
+        {
+            "id": "1755619988376",
+            "name": "A1.Egg Rolls Vietnamese",
+            "price": "6.75",
+            "description": "Egg wrap with ground pork and shrimp",
+            "category": "appetizers",
+            "image": "\/uploads\/menu\/68a4a2bc5bacb.jpg"
+        },
+        {
+            "id": "1755620097401",
+            "name": "A2. Spring Rolls",
+            "price": "6.75",
+            "description": "Rice paper, rice vermicelli, pork loin, shrimp, bean sprouts, lettuce, basil, and peanut sauce on the side",
+            "category": "appetizers",
+            "image": "\/uploads\/menu\/68a4a2ff9a2f0.jpg"
+        },
+        {
+            "id": "1755620340125",
+            "name": "A3. FRIED SHRIMP ROLLS",
+            "price": "8.75",
+            "description": "Egg wrap, shrimp, spices, and sweet chili sauce on the side",
+            "category": "appetizers",
+            "image": "\/uploads\/menu\/68a4a402c5a1e.jpg"
+        },
+        {
+            "id": "1755620529087",
+            "name": "A4. Fried Calamari",
+            "price": "9.75",
+            "description": "Crispy calamari, soy sauce, onion, sesame seeds and ginger sauce",
+            "category": "appetizers",
+            "image": "\/uploads\/menu\/68a4a5b81f1dd.png"
+        },
+        {
+            "id": "1755620646711",
+            "name": "A5. Fish sauce glazed Chicken wings ",
+            "price": "12.95",
+            "description": "chicken wings, garlic, fish sauce, sesame seeds",
+            "category": "appetizers",
+            "image": "\/uploads\/menu\/68a4a5247ac06.jpg"
+        },
+        {
+            "id": "1755620951893",
+            "name": "SP1. Stone pho special ",
+            "price": "26.95",
+            "description": "Consists of a 48-hour long-simmering bone beef broth served over fresh rice noodles, it comes with various toppings including rare steak, brisket, tendon, and Vietnamese meatball.",
+            "category": "stone pho special ",
+            "image": "\/uploads\/menu\/68a4a65503905.jpeg"
+        },
+        {
+            "id": "1755621186231",
+            "name": "P1. Pho Special",
+            "price": "15.95",
+            "description": "Steak, Brisket, Tendon & Vietnamese Meatball",
+            "category": "pho",
+            "image": "\/uploads\/menu\/68a4a7405e5f5.jpg"
+        },
+        {
+            "id": "1755621208150",
+            "name": "P2. Steak, Brisket & Tendon",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": "\/uploads\/menu\/68a4aa731e785.jpg"
+        },
+        {
+            "id": "1755621226895",
+            "name": "P3. Steak & Brisket",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621251118",
+            "name": "P4. Steak & Tendon",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621265295",
+            "name": "P5. Steak & Vietnamese Meat Ball",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621530835",
+            "name": "P6. Steak",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621561163",
+            "name": "P7. Brisket & Tendon",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621578874",
+            "name": "P8. Brisket & Vietnamese Meatball",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621633636",
+            "name": "P9. Vietnamese Meatball ",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621652020",
+            "name": "P10. Chicken Pho",
+            "price": "15.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755621674076",
+            "name": "P11. Plain Noodle",
+            "price": "9.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755622075992",
+            "name": "P12. Oxtail Pho",
+            "price": "22.95",
+            "description": "",
+            "category": "pho",
+            "image": "\/uploads\/menu\/68a4b4a041524.jpeg"
+        },
+        {
+            "id": "1755622103377",
+            "name": "P13. Pho Short Ribs",
+            "price": "23.95",
+            "description": "",
+            "category": "pho",
+            "image": "\/uploads\/menu\/68a4b47b82b4d.jpeg"
+        },
+        {
+            "id": "1755622158722",
+            "name": "P14. Pho Seafood",
+            "price": "18.95",
+            "description": "",
+            "category": "pho",
+            "image": "\/uploads\/menu\/68a4ab0c3f92a.jpg"
+        },
+        {
+            "id": "1755622276931",
+            "name": "P15. Pho Tofu and vegetable",
+            "price": "14.95",
+            "description": "",
+            "category": "pho",
+            "image": ""
+        },
+        {
+            "id": "1755622366708",
+            "name": "B1. Rice Vermicelli With Egg Rolls",
+            "price": "15.95",
+            "description": "",
+            "category": "vermicelli",
+            "image": "\/uploads\/menu\/68a4abdd05210.jpg"
+        },
+        {
+            "id": "1755622507669",
+            "name": "B2. Rice Vermicelli With Grilled Pork",
+            "price": "15.95",
+            "description": "",
+            "category": "vermicelli",
+            "image": "\/uploads\/menu\/68a4ac699155a.jpg"
+        },
+        {
+            "id": "1755622548839",
+            "name": "B3. Rice Vermicelli With Egg Rolls & Grilled Pork",
+            "price": "15.95",
+            "description": "",
+            "category": "vermicelli",
+            "image": ""
+        },
+        {
+            "id": "1755622565158",
+            "name": "B4. Rice Vermicelli Special Combination",
+            "price": "15.95",
+            "description": "",
+            "category": "vermicelli",
+            "image": ""
+        },
+        {
+            "id": "1755622622366",
+            "name": "B5. Rice Vermicelli With Grilled Shrimp",
+            "price": "15.95",
+            "description": "",
+            "category": "vermicelli",
+            "image": "\/uploads\/menu\/68a4acdc8ae46.jpg"
+        },
+        {
+            "id": "1755622876577",
+            "name": "CS1. Hue's Style Noodle Soup",
+            "price": "15.95",
+            "description": "Thick rice vermicelli, onion, cilantro, brisket, pork loin, Vietnamese meatloaf, shrimp paste, lemongrass, beef broth",
+            "category": "specialty",
+            "image": "\/uploads\/menu\/68a4ad9be9d2c.jpg"
+        },
+        {
+            "id": "1755622903250",
+            "name": "CS2. Udon Soup With Pork & Crab",
+            "price": "15.95",
+            "description": "Udon noodles, onion, cilantro, shrimp, imitation crab, pork loin, pork and crab broth",
+            "category": "specialty",
+            "image": ""
+        },
+        {
+            "id": "1755623019468",
+            "name": "CS3. Pho Stir Fry",
+            "price": "11.25",
+            "description": "Pho noodle, protein, carrot, broccoli, onion, bean sprouts and cabbage, sesame seeds.",
+            "category": "specialty",
+            "image": "\/uploads\/menu\/68a5f180566ee.jpeg"
+        },
+        {
+            "id": "1755623058590",
+            "name": "CS4. BBQ Pork Udon",
+            "price": "16.95",
+            "description": "Udon noodles, lettuce, cucumber, pickled carrots, sesame seeds, bbq pork, fried egg",
+            "category": "specialty",
+            "image": "\/uploads\/menu\/68a4ae8f56332.jpg"
+        },
+        {
+            "id": "1755623185989",
+            "name": "CS5. Sizzling Steak",
+            "price": "17.95",
+            "description": "Served in a sizzling skillet with bánh mì, egg, pate and Vietnamese meatloaf",
+            "category": "specialty",
+            "image": "\/uploads\/menu\/68a4aeffcdfe7.jpg"
+        },
+        {
+            "id": "1755623237173",
+            "name": "C1. The Combination",
+            "price": "15.95",
+            "description": "Rice, garnish, pickled carrots, onion, grilled pork chop, egg, Vietnamese sausage",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f19e1eb61.jpeg"
+        },
+        {
+            "id": "1755623261454",
+            "name": "C2. Grilled Pork",
+            "price": "15.95",
+            "description": "",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f1bcec696.jpeg"
+        },
+        {
+            "id": "1755623289816",
+            "name": "C3. Fried Rice ",
+            "price": "11.25",
+            "description": "Rice, egg, peas, onion, carrot",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f1f16da57.jpeg"
+        },
+        {
+            "id": "1755623302510",
+            "name": "C4. Crispy Chicken Rice",
+            "price": "15.95",
+            "description": "",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f2200b984.jpeg"
+        },
+        {
+            "id": "1755623330519",
+            "name": "C5. BBQ Pork Rice",
+            "price": "17.95",
+            "description": "rice, garnish, pickled carrors, onion, BBQ pork, sesame seeds",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f2496539f.jpeg"
+        },
+        {
+            "id": "1755623356920",
+            "name": "C6. Chicken Teriyaki",
+            "price": "15.95",
+            "description": "rice, garnish, pickled carrots, grilled chicken, tangerine teriyaki sauce, sesame seeds ",
+            "category": "rice",
+            "image": "\/uploads\/menu\/68a5f268e6c71.jpeg"
+        },
+        {
+            "id": "1755623475208",
+            "name": "Tropical fruit tea",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623487545",
+            "name": "Peach tea",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": "\/uploads\/menu\/68a5f2ae6664c.png"
+        },
+        {
+            "id": "1755623499785",
+            "name": "Passion Fruit Tea",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623523481",
+            "name": "Crystal coconut",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623542137",
+            "name": "Thai tea lemonade",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623555689",
+            "name": "Thai Milk Tea",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623565834",
+            "name": "Baked egg cream milk tea",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": "\/uploads\/menu\/68a5f2c25ee30.png"
+        },
+        {
+            "id": "1755623579817",
+            "name": "Coffee ice blended",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623595201",
+            "name": "Chocolate ice blended",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623625579",
+            "name": "Taro ice blended",
+            "price": "7.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623646370",
+            "name": "Vietnamese milk coffee",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        },
+        {
+            "id": "1755623660563",
+            "name": "Vietnamese black coffee",
+            "price": "6.45",
+            "description": "",
+            "category": "beverages",
+            "image": ""
+        }
+    ]
+}

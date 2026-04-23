@@ -1,0 +1,10 @@
+Options -Indexes
+RewriteEngine On
+
+# Handle preflight OPTIONS
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=200,L]
+
+# Route all /api/* requests through index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/(.*)$ index.php [QSA,L]

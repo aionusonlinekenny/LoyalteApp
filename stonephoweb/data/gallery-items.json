@@ -1,0 +1,46 @@
+{
+    "galleryItems": [
+        {
+            "id": "1",
+            "url": "/uploads/menu/68a2a82c25b0c.jpg",
+            "alt": "Fresh pho bowl",
+            "title": "Signature Pho",
+            "description": "Our famous 48-hour simmered broth"
+        },
+        {
+            "id": "2",
+            "url": "https://images.pexels.com/photos/1410235/pexels-photo-1410235.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop",
+            "alt": "Vietnamese spring rolls",
+            "title": "Fresh Spring Rolls",
+            "description": "Hand-rolled with fresh herbs"
+        },
+        {
+            "id": "3",
+            "url": "https://images.pexels.com/photos/1633525/pexels-photo-1633525.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop",
+            "alt": "Vietnamese herbs and vegetables",
+            "title": "Fresh Ingredients",
+            "description": "Authentic Vietnamese herbs and vegetables"
+        },
+        {
+            "id": "4",
+            "url": "https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop",
+            "alt": "Restaurant interior",
+            "title": "Cozy Atmosphere",
+            "description": "Warm and welcoming dining space"
+        },
+        {
+            "id": "5",
+            "url": "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop",
+            "alt": "Vietnamese banh mi",
+            "title": "Banh Mi Sandwich",
+            "description": "Crispy baguette with Vietnamese flavors"
+        },
+        {
+            "id": "6",
+            "url": "https://images.pexels.com/photos/1640773/pexels-photo-1640773.jpeg?auto=compress&cs=tinysrgb&w=600&h=600&fit=crop",
+            "alt": "Vietnamese noodle soup",
+            "title": "Specialty Noodles",
+            "description": "Various Vietnamese noodle dishes"
+        }
+    ]
+}
