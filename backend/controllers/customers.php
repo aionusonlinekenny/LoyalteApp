@@ -2,10 +2,37 @@
 // GET    /api/customers               list all (staff)
 // GET    /api/customers?phone=...     lookup by phone (staff)
 // GET    /api/customers?qr=...        lookup by QR / memberId (staff)
-// GET    /api/customers/{id}          get one (staff or customer self-lookup via phone session)
+// GET    /api/customers/{id}          get one (staff)
 // POST   /api/customers               create (staff)
+// POST   /api/customers/lookup        phone lookup — public, returns limited info
 // PUT    /api/customers/{id}/points   add/adjust points (staff)
-// POST   /api/customers/lookup        phone lookup for customer website (no auth required)
+// DELETE /api/customers/{id}          delete customer (staff)
+
+// ── POST /api/customers/lookup (public, no auth) ──────────────────────────────
+if ($method === 'POST' && $id === 'lookup') {
+    $db       = get_db();
+    $body     = json_body();
+    $phone    = trim($body['phone']     ?? '');
+    $memberId = trim($body['member_id'] ?? '');
+
+    if (!$phone && !$memberId) json_error('phone or member_id is required');
+
+    if ($phone) {
+        $stmt = $db->prepare(
+            'SELECT id, member_id, name, tier, points FROM customers WHERE phone = ? LIMIT 1'
+        );
+        $stmt->execute([$phone]);
+    } else {
+        $stmt = $db->prepare(
+            'SELECT id, member_id, name, tier, points FROM customers WHERE member_id = ? LIMIT 1'
+        );
+        $stmt->execute([$memberId]);
+    }
+
+    $c = $stmt->fetch();
+    if (!$c) json_error('Customer not found', 404);
+    json_success(['customer' => $c]);
+}
 
 auth_required();
 

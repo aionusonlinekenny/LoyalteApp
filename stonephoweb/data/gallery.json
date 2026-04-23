@@ -1,0 +1,39 @@
+{
+    "galleryItems": [
+        {
+            "id": "1",
+            "url": "\/uploads\/menu\/68a4b169d2f60.jpeg",
+            "alt": "Stone Pho Bowl",
+            "title": "Signature Stone Pho",
+            "description": "Our famous 48-hour simmered broth"
+        },
+        {
+            "id": "2",
+            "url": "\/uploads\/gallery\/photo2.jpg",
+            "alt": "Vietnamese Egg Rolls",
+            "title": "Vietnames Egg Rolls",
+            "description": "Hand-rolled "
+        },
+        {
+            "id": "3",
+            "url": "\/uploads\/gallery\/photo3.jpg",
+            "alt": "",
+            "title": "Pho Short Ribs",
+            "description": ""
+        },
+        {
+            "id": "1755623919741",
+            "url": "\/uploads\/menu\/68a4b1c99733a.jpg",
+            "alt": "ox-tail",
+            "title": "Ox-tail Pho",
+            "description": ""
+        },
+        {
+            "id": "1755623994742",
+            "url": "\/uploads\/menu\/68a4b238ddd64.jpg",
+            "alt": " Sizzling Steak",
+            "title": "Sizzling Steak",
+            "description": ""
+        }
+    ]
+}

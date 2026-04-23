@@ -1,0 +1,11 @@
+# Netlify redirects for Stone Pho website
+/*    /index.html   200
+
+# Admin panel redirect
+/admin    /index.html#admin   200
+
+# API redirects (if needed later)
+/api/*    /api/:splat   200
+
+# Handle hash routing
+/#/*    /index.html   200

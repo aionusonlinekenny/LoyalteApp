@@ -1,0 +1,171 @@
+# Stone Pho Website - Apache Configuration
+# Hosting: Debian + PHP 7.4.10
+# Document Root: /home/users/web/b1405/dom.kennylucia51612/public_html
+
+RewriteEngine On
+
+# Set default index files
+DirectoryIndex index.html index.php
+
+# PHP Configuration for uploads
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
+php_value max_execution_time 300
+php_value memory_limit 256M
+php_value max_input_time 300
+php_value max_input_vars 3000
+
+# Enable file uploads
+php_flag file_uploads On
+
+# Allow uploads directory access
+<Directory "uploads">
+    Options -Indexes
+    AllowOverride None
+    Order Allow,Deny
+    Allow from all
+    
+    # Only allow image files in uploads
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
+        Order Allow,Deny
+        Allow from all
+    </FilesMatch>
+    
+    # Block PHP execution in uploads directory
+    <FilesMatch "\.php$">
+        Order Allow,Deny
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+# API directory configuration
+<Directory "api">
+    Options -Indexes
+    AllowOverride None
+    Order Allow,Deny
+    Allow from all
+    
+    # Allow PHP files in API directory
+    <FilesMatch "\.php$">
+        Order Allow,Deny
+        Allow from all
+    </FilesMatch>
+</Directory>
+
+# CORS headers for API endpoints
+<FilesMatch "^(api/.*\.php)$">
+    Header always set Access-Control-Allow-Origin "https://stonephovaldosta.com"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Max-Age "3600"
+</FilesMatch>
+
+# Handle preflight OPTIONS requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^api/ - [R=200,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options SAMEORIGIN
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Compression for better performance
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Browser caching for static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType application/x-javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    
+    # Fonts
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    
+    # HTML and other text files
+    ExpiresByType text/html "access plus 1 hour"
+    ExpiresByType application/json "access plus 1 hour"
+</IfModule>
+
+# Handle React Router (SPA routing)
+RewriteBase /
+RewriteRule ^index\.html$ - [L]
+
+# Don't rewrite files and directories that exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Don't rewrite API calls
+RewriteCond %{REQUEST_URI} !^/api/
+
+# Don't rewrite uploads
+RewriteCond %{REQUEST_URI} !^/uploads/
+
+# Don't rewrite debug/test files
+RewriteCond %{REQUEST_URI} !^/debug
+RewriteCond %{REQUEST_URI} !^/test
+RewriteCond %{REQUEST_URI} !\.php$
+
+# Redirect everything else to index.html for React Router
+RewriteRule . /index.html [L]
+
+# Block access to sensitive files
+<FilesMatch "^(\.htaccess|\.htpasswd|\.env|package\.json|package-lock\.json|composer\.json|composer\.lock|\.git)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Block access to backup and temporary files
+<FilesMatch "\.(bak|backup|old|tmp|temp|log|sql|gz|tar|zip)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory browsing
+Options -Indexes
+
+# Custom error pages
+ErrorDocument 404 /index.html
+ErrorDocument 403 /index.html
+ErrorDocument 500 /index.html
+
+# Force HTTPS (uncomment if you have SSL certificate)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevent hotlinking of images
+RewriteCond %{HTTP_REFERER} !^$
+RewriteCond %{HTTP_REFERER} !^https?://(www\.)?stonephovaldosta\.com [NC]
+RewriteCond %{REQUEST_URI} \.(jpg|jpeg|png|gif|webp)$ [NC]
+RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [F]
