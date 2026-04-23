@@ -70,8 +70,9 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Default staff account  (password: admin123 — CHANGE IN PRODUCTION) ──────
+-- Default staff account (password: admin123)
 INSERT INTO staff_accounts (email, password_hash, name) VALUES
-('admin@loyalte.app', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin')
+('admin@loyalte.app', '$2y$10$TKh8H1.PfbuJB3a29HOL6.Q7UrZpF/cOqzKQ.R8yQfM9yEqfW.I3W', 'Admin')
 ON DUPLICATE KEY UPDATE id=id;
 
 -- ─── Rewards ─────────────────────────────────────────────────────────────────
