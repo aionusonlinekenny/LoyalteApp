@@ -70,20 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-function tier_from_points(int $points): string {
-    if ($points >= 2500) return 'PLATINUM';
-    if ($points >= 1000) return 'GOLD';
-    if ($points >= 500)  return 'SILVER';
-    return 'BRONZE';
-}
-
-function uuid4(): string {
-    $data    = random_bytes(16);
-    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
-    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
-    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
-}
 ?>
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
