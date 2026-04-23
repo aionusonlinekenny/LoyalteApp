@@ -131,3 +131,30 @@ data class RedemptionsResponse(
     val redemptions: List<RedemptionDto>?,
     val message: String?
 )
+
+// ─── Simple Response ──────────────────────────────────────────────────────────
+
+data class SimpleResponse(
+    val success: Boolean,
+    val message: String?
+)
+
+// ─── Receipt Codes ────────────────────────────────────────────────────────────
+
+data class ReceiptCodeDto(
+    val id: String,
+    val code: String,
+    val points: Int,
+    @SerializedName("expires_at")   val expiresAt: Long,
+    @SerializedName("claimed_by")   val claimedBy: String?,
+    @SerializedName("claimed_at")   val claimedAt: Long?,
+    @SerializedName("created_by")   val createdBy: Int,
+    @SerializedName("created_at")   val createdAt: Long,
+    val note: String?
+)
+
+data class ReceiptCodesResponse(
+    val success: Boolean,
+    val codes: List<ReceiptCodeDto>?,
+    val message: String?
+)

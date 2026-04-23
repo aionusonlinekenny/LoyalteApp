@@ -13,4 +13,5 @@ interface CustomerRepository {
     suspend fun updateCustomer(customer: Customer)
     suspend fun updatePoints(customerId: String, points: Int)
     suspend fun getCustomerCount(): Int
+    suspend fun deleteCustomer(id: String): Boolean
 }

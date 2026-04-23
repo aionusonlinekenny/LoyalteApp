@@ -71,6 +71,16 @@ if ($method === 'POST' && $id === null) {
     json_success(['customer' => $stmt->fetch()], 201);
 }
 
+// ── DELETE /api/customers/{id} ────────────────────────────────────────────────
+if ($method === 'DELETE' && $id !== null) {
+    $stmt = $db->prepare('SELECT id FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    if (!$stmt->fetch()) json_error('Customer not found', 404);
+
+    $db->prepare('DELETE FROM customers WHERE id = ?')->execute([$id]);
+    json_success(['message' => 'Customer deleted']);
+}
+
 // ── PUT /api/customers/{id}/points ────────────────────────────────────────────
 if ($method === 'PUT' && $id !== null && $sub === 'points') {
     $body   = json_body();

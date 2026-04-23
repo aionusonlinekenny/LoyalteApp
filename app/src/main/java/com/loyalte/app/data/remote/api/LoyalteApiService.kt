@@ -45,6 +45,11 @@ interface LoyalteApiService {
         @Body body: AddPointsRequest
     ): Response<CustomerResponse>
 
+    @DELETE("customers/{id}")
+    suspend fun deleteCustomer(
+        @Path("id") id: String
+    ): Response<SimpleResponse>
+
     // ── Transactions ──────────────────────────────────────────────────────────
 
     @GET("transactions")
@@ -75,4 +80,9 @@ interface LoyalteApiService {
     suspend fun redeemReward(
         @Body body: RedeemRequest
     ): Response<RedeemResponse>
+
+    // ── Receipt Codes ─────────────────────────────────────────────────────────
+
+    @GET("receipt_codes")
+    suspend fun getReceiptCodes(): Response<ReceiptCodesResponse>
 }

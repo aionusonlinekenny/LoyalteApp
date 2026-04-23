@@ -53,6 +53,9 @@ class RetrofitCustomerRepositoryImpl @Inject constructor(
 
     override suspend fun getCustomerCount(): Int =
         api.getAllCustomers().body()?.customers?.size ?: 0
+
+    override suspend fun deleteCustomer(id: String): Boolean =
+        api.deleteCustomer(id).body()?.success == true
 }
 
 private fun CustomerDto.toDomain() = Customer(

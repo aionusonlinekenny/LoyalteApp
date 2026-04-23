@@ -34,6 +34,9 @@ interface CustomerDao {
     @Query("SELECT COUNT(*) FROM customers")
     suspend fun getCount(): Int
 
+    @Query("DELETE FROM customers WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("DELETE FROM customers")
     suspend fun deleteAll()
 }

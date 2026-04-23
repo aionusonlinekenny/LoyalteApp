@@ -39,6 +39,11 @@ class CustomerRepositoryImpl @Inject constructor(
 
     override suspend fun getCustomerCount(): Int =
         customerDao.getCount()
+
+    override suspend fun deleteCustomer(id: String): Boolean {
+        customerDao.deleteById(id)
+        return true
+    }
 }
 
 // ---- Mapper extensions ----
