@@ -64,20 +64,12 @@ class StaffLoginViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                     _events.emit(Event.LoginSuccess)
                 } else {
-                    val msg = body?.message ?: when (response.code()) {
-                        401  -> "Invalid email or password"
-                        else -> "Login failed. Please try again."
-                    }
+                    val msg = "HTTP ${response.code()} | ${body?.message ?: response.errorBody()?.string() ?: "no body"}"
                     _uiState.update { it.copy(isLoading = false, errorMessage = msg) }
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = if (e.message?.contains("Unable to resolve host") == true ||
-                            e.message?.contains("connect") == true
-                        ) "Network error. Check connection." else "Login failed. Please try again."
-                    )
+                    it.copy(isLoading = false, errorMessage = "ERR: ${e.javaClass.simpleName}: ${e.message}")
                 }
             }
         }
