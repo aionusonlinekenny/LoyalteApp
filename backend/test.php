@@ -1,35 +1,50 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 
 header('Content-Type: application/json');
 
-$db = get_db();
+$email    = 'admin@loyalte.app';
+$password = 'admin123';
+$db       = get_db();
 
-// 1. Check staff_accounts table exists and has data
-$staff = $db->query('SELECT id, email, name, password_hash FROM staff_accounts LIMIT 5')->fetchAll();
+// Step 1: find staff
+$stmt = $db->prepare('SELECT id, password_hash, name FROM staff_accounts WHERE email = ?');
+$stmt->execute([$email]);
+$staff = $stmt->fetch();
 
-// 2. Test password verification
-$testEmail    = 'admin@loyalte.app';
-$testPassword = 'admin123';
+$results = [
+    'step1_staff_found'   => (bool)$staff,
+    'step2_password_ok'   => $staff ? password_verify($password, $staff['password_hash']) : false,
+    'step3_token_created' => false,
+    'step4_full_response' => null,
+    'error'               => null,
+];
 
-$stmt = $db->prepare('SELECT password_hash FROM staff_accounts WHERE email = ?');
-$stmt->execute([$testEmail]);
-$row = $stmt->fetch();
-
-$hashMatch = $row ? password_verify($testPassword, $row['password_hash']) : false;
-
-// 3. Check auth_tokens table exists
-try {
-    $db->query('SELECT COUNT(*) FROM auth_tokens');
-    $tokensTableOk = true;
-} catch (Exception $e) {
-    $tokensTableOk = false;
+if (!$staff || !$results['step2_password_ok']) {
+    echo json_encode($results, JSON_PRETTY_PRINT);
+    exit;
 }
 
-echo json_encode([
-    'staff_accounts_found' => count($staff),
-    'staff_rows'           => array_map(fn($s) => ['id'=>$s['id'],'email'=>$s['email'],'name'=>$s['name']], $staff),
-    'password_verify_admin123' => $hashMatch,
-    'auth_tokens_table_ok' => $tokensTableOk,
-], JSON_PRETTY_PRINT);
+// Step 3: create token
+try {
+    $token     = bin2hex(random_bytes(32));
+    $nowMs     = (int)(microtime(true) * 1000);
+    $expiresAt = $nowMs + TOKEN_TTL_MS;
+
+    $db->prepare('INSERT INTO auth_tokens (token, staff_id, expires_at) VALUES (?, ?, ?)')
+       ->execute([$token, $staff['id'], $expiresAt]);
+
+    $results['step3_token_created'] = true;
+    $results['step4_full_response'] = [
+        'success'    => true,
+        'token'      => substr($token, 0, 8) . '...',
+        'expires_at' => $expiresAt,
+        'staff'      => ['id' => $staff['id'], 'name' => $staff['name'], 'email' => $email],
+    ];
+} catch (Exception $e) {
+    $results['error'] = $e->getMessage();
+}
+
+echo json_encode($results, JSON_PRETTY_PRINT);
