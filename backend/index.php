@@ -38,6 +38,9 @@ switch ($resource) {
     case 'redemptions':
         require __DIR__ . '/controllers/redemptions.php';
         break;
+    case 'receipt_codes':
+        require __DIR__ . '/controllers/receipt_codes.php';
+        break;
     default:
         json_error('Not found', 404);
 }

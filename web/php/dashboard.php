@@ -99,6 +99,7 @@ function fmt_date(int $ms): string {
   <div class="nav-links">
     <a href="history.php">Lịch sử điểm</a>
     <a href="rewards.php">Đổi ưu đãi</a>
+    <a href="claim.php">🧾 Nhập mã receipt</a>
   </div>
 
   <!-- QR Code -->
