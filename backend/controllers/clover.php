@@ -46,8 +46,11 @@ function clover_api(string $cfg_env, string $token, string $path): ?array {
 // ── GET /api/clover/webhook — Clover verification challenge ──────────────────
 if ($method === 'GET' && $id === 'webhook') {
     $code = $_GET['verificationCode'] ?? '';
-    // Save code to file so admin can read it if needed
-    file_put_contents(__DIR__ . '/../clover_verify.txt', $code . "\n" . date('Y-m-d H:i:s'));
+    // Log everything Clover sends so we can debug
+    $log = date('Y-m-d H:i:s') . "\n"
+         . 'GET params: ' . json_encode($_GET) . "\n"
+         . 'Headers: ' . json_encode(getallheaders()) . "\n";
+    file_put_contents(__DIR__ . '/../clover_verify.txt', $log);
     header('Content-Type: text/plain');
     echo $code;
     exit;
@@ -55,6 +58,13 @@ if ($method === 'GET' && $id === 'webhook') {
 
 // ── POST /api/clover/webhook ─────────────────────────────────────────────────
 if ($method === 'POST' && $id === 'webhook') {
+    $raw = file_get_contents('php://input');
+    // Log raw POST body for debugging
+    $log = date('Y-m-d H:i:s') . " [POST]\n"
+         . 'Body: ' . $raw . "\n"
+         . 'Headers: ' . json_encode(getallheaders()) . "\n";
+    file_put_contents(__DIR__ . '/../clover_verify.txt', $log);
+
     $db     = get_db();
     $cfg    = clover_get_config($db);
     $nowMs  = (int)(microtime(true) * 1000);
