@@ -46,6 +46,8 @@ function clover_api(string $cfg_env, string $token, string $path): ?array {
 // ── GET /api/clover/webhook — Clover verification challenge ──────────────────
 if ($method === 'GET' && $id === 'webhook') {
     $code = $_GET['verificationCode'] ?? '';
+    // Save code to file so admin can read it if needed
+    file_put_contents(__DIR__ . '/../clover_verify.txt', $code . "\n" . date('Y-m-d H:i:s'));
     header('Content-Type: text/plain');
     echo $code;
     exit;
