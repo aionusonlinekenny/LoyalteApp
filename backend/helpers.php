@@ -22,7 +22,7 @@ function auth_required(): array {
     $headers = getallheaders();
     $auth    = $headers['Authorization'] ?? $headers['authorization'] ?? '';
 
-    if (!str_starts_with($auth, 'Bearer ')) {
+    if (strpos($auth, 'Bearer ') !== 0) {
         json_error('Unauthorized', 401);
     }
 
