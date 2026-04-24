@@ -58,12 +58,15 @@ if ($method === 'GET' && $id === 'webhook') {
 
 // ── POST /api/clover/webhook ─────────────────────────────────────────────────
 if ($method === 'POST' && $id === 'webhook') {
-    $raw = file_get_contents('php://input');
-    // Log raw POST body for debugging
-    $log = date('Y-m-d H:i:s') . " [POST]\n"
-         . 'Body: ' . $raw . "\n"
-         . 'Headers: ' . json_encode(getallheaders()) . "\n";
-    file_put_contents(__DIR__ . '/../clover_verify.txt', $log);
+    $raw  = file_get_contents('php://input');
+    $data = json_decode($raw, true) ?: [];
+
+    // Clover sends POST with {"verificationCode":"..."} to verify the URL
+    if (isset($data['verificationCode'])) {
+        http_response_code(200);
+        echo json_encode(['verificationCode' => $data['verificationCode']]);
+        exit;
+    }
 
     $db     = get_db();
     $cfg    = clover_get_config($db);
