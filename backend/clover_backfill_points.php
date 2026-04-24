@@ -188,7 +188,12 @@ foreach ($toProcess as $paymentId => $p) {
     $rows .= "<tr><td>$paymentId</td><td>$" . number_format($amountCents/100,2) . "</td><td style='color:green'>✅ $name ($phone)</td><td>+$pts</td></tr>";
 }
 
-$nextOffset = $offset + $limit;
+$nextOffset    = $offset + $limit;
+$totalProcessed = $processed + (int)($_GET['tp'] ?? 0);
+$totalSkipped   = $skipped   + (int)($_GET['ts'] ?? 0);
+$totalNoPhone   = $noPhone   + (int)($_GET['tn'] ?? 0);
+$totalNotIn     = $notInProgram + (int)($_GET['tni'] ?? 0);
+$nextUrl = "?offset={$nextOffset}&days={$days}&tp={$totalProcessed}&ts={$totalSkipped}&tn={$totalNoPhone}&tni={$totalNotIn}";
 ?>
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Clover Points Backfill</title>
@@ -231,9 +236,35 @@ $nextOffset = $offset + $limit;
 <?php endif; ?>
 
 <?php if ($hasMore): ?>
-  <a class="btn" href="?offset=<?= $nextOffset ?>&days=<?= $days ?>">▶ Next 500</a>
+<div class="box" style="background:#fff8e1;border:1px solid #ffe082;margin-top:16px">
+  <b>Running totals:</b>
+  ✅ Awarded: <b><?= $totalProcessed ?></b> &nbsp;|&nbsp;
+  ⏭ Skipped: <b><?= $totalSkipped ?></b> &nbsp;|&nbsp;
+  📵 No phone: <b><?= $totalNoPhone ?></b> &nbsp;|&nbsp;
+  ❌ Not enrolled: <b><?= $totalNotIn ?></b>
+</div>
+<div class="box" style="background:#e3f2fd;border:1px solid #90caf9;margin-top:8px;font-size:15px">
+  ⏳ Next batch starts in <b id="cd">3</b> seconds…
+  <a href="<?= $nextUrl ?>" style="margin-left:16px;color:#1565c0">Skip wait ▶</a>
+</div>
+<script>
+  var s = 3;
+  var t = setInterval(function(){
+    s--;
+    document.getElementById('cd').textContent = s;
+    if(s <= 0){ clearInterval(t); window.location = '<?= $nextUrl ?>'; }
+  }, 1000);
+</script>
 <?php else: ?>
-  <div class="done">🎉 All done! Delete this file from server.</div>
+<div class="done">
+  🎉 <b>All done!</b><br><br>
+  Final totals:<br>
+  ✅ Points awarded: <b><?= $totalProcessed ?></b> payments<br>
+  ⏭ Already processed: <b><?= $totalSkipped ?></b><br>
+  📵 No phone on order: <b><?= $totalNoPhone ?></b><br>
+  ❌ Phone not enrolled: <b><?= $totalNotIn ?></b><br><br>
+  <small>Delete clover_backfill_points.php from your server.</small>
+</div>
 <?php endif; ?>
 
 </body></html>
