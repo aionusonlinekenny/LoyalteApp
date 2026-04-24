@@ -1,6 +1,6 @@
 <?php
 // Database connection settings
-define('DB_HOST',    'localhost');
+define('DB_HOST',    'custsql-dom09.eigbox.net');
 define('DB_NAME',    'loyalteapp');
 define('DB_USER',    'loyaltyapp');
 define('DB_PASS',    'Stonepho1525@');
