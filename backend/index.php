@@ -41,6 +41,9 @@ switch ($resource) {
     case 'receipt_codes':
         require __DIR__ . '/controllers/receipt_codes.php';
         break;
+    case 'clover':
+        require __DIR__ . '/controllers/clover.php';
+        break;
     default:
         json_error('Not found', 404);
 }

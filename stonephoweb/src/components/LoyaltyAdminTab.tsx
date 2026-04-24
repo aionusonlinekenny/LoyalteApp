@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Receipt, Plus, Trash2, Search, RefreshCw,
-  LogIn, Star, CheckCircle, Clock, XCircle, Lock, Mail
+  LogIn, Star, CheckCircle, Clock, XCircle, Lock, Mail,
+  Settings, Zap, AlertCircle
 } from 'lucide-react';
 
 const API = '/loyalteapp/backend/api';
@@ -16,6 +17,30 @@ interface Customer {
   email?: string;
   tier: string;
   points: number;
+}
+
+interface CloverConfig {
+  app_id: string;
+  app_secret: string;
+  access_token: string;
+  merchant_id: string;
+  environment: 'sandbox' | 'production';
+  points_per_dollar: string;
+  enabled: string;
+}
+
+interface CloverLog {
+  id: number;
+  payment_id: string;
+  merchant_id: string;
+  order_id: string | null;
+  customer_name: string | null;
+  phone: string | null;
+  amount_cents: number;
+  points_awarded: number;
+  status: 'processed' | 'no_customer' | 'error';
+  note: string | null;
+  created_at: number;
 }
 
 interface ReceiptCode {
@@ -450,6 +475,256 @@ const ReceiptCodes: React.FC<{ token: string }> = ({ token }) => {
   );
 };
 
+// ── Clover Settings ───────────────────────────────────────────────────────────
+
+const CloverSettings: React.FC<{ token: string }> = ({ token }) => {
+  const [cfg, setCfg] = useState<CloverConfig>({
+    app_id: '', app_secret: '', access_token: '', merchant_id: '',
+    environment: 'sandbox', points_per_dollar: '1', enabled: '0',
+  });
+  const [logs, setLogs] = useState<CloverLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'ok' | 'err'>('ok');
+  const [showLogs, setShowLogs] = useState(false);
+
+  const loadConfig = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/clover/config`, { headers: authHeader(token) });
+      const data = await res.json();
+      if (data.success && data.config) {
+        setCfg(prev => ({ ...prev, ...data.config }));
+      }
+    } catch {
+      setMessage('Failed to load Clover config');
+      setMessageType('err');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  const loadLogs = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/clover/logs?limit=30`, { headers: authHeader(token) });
+      const data = await res.json();
+      setLogs(data.logs ?? []);
+    } catch {
+      // ignore
+    }
+  }, [token]);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload: Partial<CloverConfig> = {
+        app_id: cfg.app_id,
+        merchant_id: cfg.merchant_id,
+        environment: cfg.environment,
+        points_per_dollar: cfg.points_per_dollar,
+        enabled: cfg.enabled,
+      };
+      // Only send secrets if user typed real values (not masked placeholders)
+      if (cfg.access_token && !cfg.access_token.startsWith('••••')) {
+        payload.access_token = cfg.access_token;
+      }
+      if (cfg.app_secret && !cfg.app_secret.startsWith('••••')) {
+        payload.app_secret = cfg.app_secret;
+      }
+      const res = await fetch(`${API}/clover/config`, {
+        method: 'PUT',
+        headers: authHeader(token),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('Settings saved');
+        setMessageType('ok');
+        loadConfig();
+      } else {
+        setMessage(data.message || 'Save failed');
+        setMessageType('err');
+      }
+    } catch {
+      setMessage('Save failed');
+      setMessageType('err');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statusBadge = (s: CloverLog['status']) => {
+    if (s === 'processed') return 'bg-green-100 text-green-700';
+    if (s === 'no_customer') return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+  };
+
+  if (loading) return <div className="text-center py-12 text-gray-500">Loading Clover config…</div>;
+
+  return (
+    <div className="space-y-6">
+      {message && (
+        <div className={`p-3 rounded-lg text-sm flex justify-between ${
+          messageType === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        }`}>
+          {message}
+          <button onClick={() => setMessage('')} className="ml-2">✕</button>
+        </div>
+      )}
+
+      {/* Webhook URL info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-blue-900 mb-1">Clover Webhook URL</p>
+            <code className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded block break-all">
+              http://23.125.89.153/loyalteapp/backend/api/clover/webhook
+            </code>
+            <p className="text-xs text-blue-700 mt-2">
+              Paste this URL in your Clover Developer Dashboard → App → Webhooks.
+              Subscribe to the <strong>payment.created</strong> event.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Config form */}
+      <form onSubmit={handleSave} className="space-y-4">
+        <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+          <Zap className="w-4 h-4 text-orange-500" /> Clover API Settings
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">App ID</label>
+            <input
+              type="text" value={cfg.app_id}
+              onChange={e => setCfg({ ...cfg, app_id: e.target.value })}
+              placeholder="e.g. 2HCEACS0YWQZ8"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Merchant ID</label>
+            <input
+              type="text" value={cfg.merchant_id}
+              onChange={e => setCfg({ ...cfg, merchant_id: e.target.value })}
+              placeholder="From Clover merchant dashboard"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Access Token</label>
+          <input
+            type="password" value={cfg.access_token}
+            onChange={e => setCfg({ ...cfg, access_token: e.target.value })}
+            placeholder="Paste new token to update (leave blank to keep existing)"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Get from Clover Sandbox → Merchant Dashboard → Account &amp; Setup → API Tokens
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">App Secret</label>
+          <input
+            type="password" value={cfg.app_secret}
+            onChange={e => setCfg({ ...cfg, app_secret: e.target.value })}
+            placeholder="Paste new secret to update"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Environment</label>
+            <select
+              value={cfg.environment}
+              onChange={e => setCfg({ ...cfg, environment: e.target.value as 'sandbox' | 'production' })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="sandbox">Sandbox (testing)</option>
+              <option value="production">Production (live)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Points per $1</label>
+            <input
+              type="number" min="1" max="100" value={cfg.points_per_dollar}
+              onChange={e => setCfg({ ...cfg, points_per_dollar: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Integration</label>
+            <select
+              value={cfg.enabled}
+              onChange={e => setCfg({ ...cfg, enabled: e.target.value })}
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 font-medium ${
+                cfg.enabled === '1' ? 'border-green-400 text-green-700 bg-green-50' : 'border-gray-300 text-gray-600'
+              }`}
+            >
+              <option value="0">Disabled</option>
+              <option value="1">Enabled</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          type="submit" disabled={saving}
+          className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          {saving ? 'Saving…' : 'Save Clover Settings'}
+        </button>
+      </form>
+
+      {/* Payment Logs */}
+      <div>
+        <button
+          onClick={() => { setShowLogs(!showLogs); if (!showLogs) loadLogs(); }}
+          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
+        >
+          <Receipt className="w-4 h-4" />
+          {showLogs ? '▾' : '▸'} Payment Logs (last 30)
+        </button>
+
+        {showLogs && (
+          <div className="mt-3 space-y-2">
+            {logs.length === 0 ? (
+              <p className="text-sm text-gray-400 py-4 text-center">No logs yet</p>
+            ) : logs.map(log => (
+              <div key={log.id} className="p-3 border border-gray-200 rounded-xl text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <code className="font-mono text-gray-700">{log.payment_id}</code>
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${statusBadge(log.status)}`}>
+                    {log.status === 'processed' ? `+${log.points_awarded} pts` : log.status}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-gray-500">
+                  <span>${(log.amount_cents / 100).toFixed(2)}</span>
+                  {log.customer_name && <span>{log.customer_name}</span>}
+                  {log.phone && <span>{log.phone}</span>}
+                  {log.note && <span className="italic">{log.note}</span>}
+                  <span>{fmtDate(log.created_at)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const LoyaltyAdminTab: React.FC = () => {
@@ -458,7 +733,7 @@ const LoyaltyAdminTab: React.FC = () => {
     const exp = parseInt(localStorage.getItem('loyalteTokenExpiry') ?? '0');
     return t && Date.now() < exp ? t : null;
   });
-  const [activeTab, setActiveTab] = useState<'customers' | 'codes'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'codes' | 'clover'>('customers');
 
   const handleLogout = () => {
     localStorage.removeItem('loyalteToken');
@@ -497,6 +772,17 @@ const LoyaltyAdminTab: React.FC = () => {
             <Receipt className="w-4 h-4" />
             Receipt Codes
           </button>
+          <button
+            onClick={() => setActiveTab('clover')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'clover'
+                ? 'bg-orange-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <Zap className="w-4 h-4" />
+            Clover POS
+          </button>
         </div>
         <button
           onClick={handleLogout}
@@ -508,6 +794,7 @@ const LoyaltyAdminTab: React.FC = () => {
 
       {activeTab === 'customers' && <CustomerList token={token} />}
       {activeTab === 'codes' && <ReceiptCodes token={token} />}
+      {activeTab === 'clover' && <CloverSettings token={token} />}
     </div>
   );
 };
