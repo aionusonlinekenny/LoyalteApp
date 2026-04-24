@@ -245,4 +245,126 @@ if ($method === 'GET' && $id === 'logs') {
     json_success(['logs' => $stmt->fetchAll()]);
 }
 
+// ── POST /api/clover/sync — manual pull of recent payments ───────────────────
+if ($method === 'POST' && $id === 'sync') {
+    $cfg   = clover_get_config($db);
+    $token = $cfg['access_token'] ?? '';
+    $mId   = $cfg['merchant_id']  ?? '';
+    $env   = $cfg['environment']  ?? 'sandbox';
+    $ptsPerDollar = max(1, (int)($cfg['points_per_dollar'] ?? 1));
+    $nowMs = (int)(microtime(true) * 1000);
+
+    if (!$token || !$mId) json_error('Access token and merchant ID are required');
+
+    // Sync from last 24 hours (or since last sync if stored)
+    $lastSync = (int)($cfg['last_sync_at'] ?? 0);
+    if (!$lastSync) $lastSync = $nowMs - (24 * 60 * 60 * 1000); // 24h ago
+
+    $result = clover_api($env, $token,
+        "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order&limit=100"
+    );
+
+    if ($result === null) json_error('Failed to connect to Clover API. Check your access token and merchant ID.');
+
+    $payments  = $result['elements'] ?? [];
+    $processed = 0;
+    $skipped   = 0;
+    $noPhone   = 0;
+    $errors    = 0;
+
+    foreach ($payments as $payment) {
+        $paymentId   = $payment['id'] ?? '';
+        $amountCents = (int)($payment['amount'] ?? 0);
+        $orderId     = $payment['order']['id'] ?? null;
+
+        if (!$paymentId) continue;
+
+        // Skip already processed
+        $check = $db->prepare('SELECT id FROM clover_payment_logs WHERE payment_id = ?');
+        $check->execute([$paymentId]);
+        if ($check->fetch()) { $skipped++; continue; }
+
+        // Get customer phone from order
+        $phone = null;
+        if ($orderId) {
+            $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers");
+            $cloverCustomers = $order['customers']['elements'] ?? [];
+            foreach ($cloverCustomers as $cc) {
+                $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+                if ($raw) { $phone = $raw; break; }
+            }
+        }
+
+        if (!$phone) {
+            $db->prepare(
+                'INSERT INTO clover_payment_logs
+                 (payment_id, merchant_id, order_id, amount_cents, points_awarded, status, note, created_at)
+                 VALUES (?, ?, ?, ?, 0, \'no_customer\', \'No phone on Clover order\', ?)'
+            )->execute([$paymentId, $mId, $orderId, $amountCents, $nowMs]);
+            $noPhone++;
+            continue;
+        }
+
+        $stmt = $db->prepare(
+            'SELECT id, points FROM customers WHERE phone = ? OR phone = ? LIMIT 1'
+        );
+        $stmt->execute([$phone, ltrim($phone, '1')]);
+        $customer = $stmt->fetch();
+
+        if (!$customer) {
+            $db->prepare(
+                'INSERT INTO clover_payment_logs
+                 (payment_id, merchant_id, order_id, phone, amount_cents, points_awarded, status, note, created_at)
+                 VALUES (?, ?, ?, ?, ?, 0, \'no_customer\', \'Phone not in loyalty program\', ?)'
+            )->execute([$paymentId, $mId, $orderId, $phone, $amountCents, $nowMs]);
+            $noPhone++;
+            continue;
+        }
+
+        $pts = intdiv($amountCents, 100) * $ptsPerDollar;
+
+        if ($pts > 0) {
+            $db->beginTransaction();
+            try {
+                $s = $db->prepare('SELECT points FROM customers WHERE id = ? FOR UPDATE');
+                $s->execute([$customer['id']]);
+                $cur = $s->fetch();
+
+                $newPoints = $cur['points'] + $pts;
+                $tier      = tier_from_points($newPoints);
+
+                $db->prepare('UPDATE customers SET points=?, tier=?, updated_at=? WHERE id=?')
+                   ->execute([$newPoints, $tier, $nowMs, $customer['id']]);
+                $db->prepare(
+                    'INSERT INTO loyalty_transactions (id, customer_id, type, points, description, created_at)
+                     VALUES (?, ?, \'EARNED\', ?, ?, ?)'
+                )->execute([uuid4(), $customer['id'], $pts, "Clover sync {$paymentId}", $nowMs]);
+                $db->commit();
+            } catch (Exception $e) {
+                $db->rollBack();
+                $pts = 0;
+                $errors++;
+            }
+        }
+
+        $db->prepare(
+            'INSERT INTO clover_payment_logs
+             (payment_id, merchant_id, order_id, customer_id, phone, amount_cents, points_awarded, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, \'processed\', ?)'
+        )->execute([$paymentId, $mId, $orderId, $customer['id'], $phone, $amountCents, $pts, $nowMs]);
+        $processed++;
+    }
+
+    // Save last sync time
+    clover_set_config($db, 'last_sync_at', (string)$nowMs);
+
+    json_success([
+        'total'     => count($payments),
+        'processed' => $processed,
+        'skipped'   => $skipped,
+        'no_phone'  => $noPhone,
+        'errors'    => $errors,
+    ]);
+}
+
 json_error('Not found', 404);

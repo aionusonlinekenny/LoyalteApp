@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, Receipt, Plus, Trash2, Search, RefreshCw,
   LogIn, Star, CheckCircle, Clock, XCircle, Lock, Mail,
-  Settings, Zap, AlertCircle
+  Settings, Zap, AlertCircle, Download
 } from 'lucide-react';
 
 const API = '/loyalteapp/backend/api';
@@ -485,6 +485,7 @@ const CloverSettings: React.FC<{ token: string }> = ({ token }) => {
   const [logs, setLogs] = useState<CloverLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'ok' | 'err'>('ok');
   const [showLogs, setShowLogs] = useState(false);
@@ -561,6 +562,30 @@ const CloverSettings: React.FC<{ token: string }> = ({ token }) => {
     if (s === 'processed') return 'bg-green-100 text-green-700';
     if (s === 'no_customer') return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-700';
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API}/clover/sync`, {
+        method: 'POST',
+        headers: authHeader(token),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage(`Sync done: ${data.processed} points awarded, ${data.skipped} already processed, ${data.no_phone} no phone match`);
+        setMessageType('ok');
+        loadLogs();
+      } else {
+        setMessage(data.message || 'Sync failed');
+        setMessageType('err');
+      }
+    } catch {
+      setMessage('Sync failed — check connection');
+      setMessageType('err');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   if (loading) return <div className="text-center py-12 text-gray-500">Loading Clover config…</div>;
@@ -678,13 +703,22 @@ const CloverSettings: React.FC<{ token: string }> = ({ token }) => {
           </div>
         </div>
 
-        <button
-          type="submit" disabled={saving}
-          className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
-        >
-          <Settings className="w-4 h-4" />
-          {saving ? 'Saving…' : 'Save Clover Settings'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="submit" disabled={saving}
+            className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            {saving ? 'Saving…' : 'Save Settings'}
+          </button>
+          <button
+            type="button" onClick={handleSync} disabled={syncing}
+            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {syncing ? 'Syncing…' : 'Sync Payments Now'}
+          </button>
+        </div>
       </form>
 
       {/* Payment Logs */}
