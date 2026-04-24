@@ -1,18 +1,16 @@
 <?php
 // Database connection settings
-// Change these to match your XAMPP / VPS MySQL credentials
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'loyalteapp');
-define('DB_USER', 'root');
-define('DB_PASS', '');       // XAMPP default: empty. Change on VPS!
+define('DB_HOST',    'kennylucia51612.domaincommysql.com');
+define('DB_NAME',    'loyalteapp');
+define('DB_USER',    'loyaltyapp');
+define('DB_PASS',    'Stonepho1525@');
 define('DB_CHARSET', 'utf8mb4');
 
 // Token lifetime: 30 days in milliseconds
 define('TOKEN_TTL_MS', 30 * 24 * 60 * 60 * 1000);
 
-// Allow requests from the Android app and local web
-// On production VPS replace '*' with your actual domain
-define('CORS_ORIGIN', '*');
+// Allow requests from the Android app and web
+define('CORS_ORIGIN', 'https://www.stonephovaldosta.com');
 
 // Clover POS App credentials
 // Set via Admin → Loyalty → Clover Settings, or fill in here directly

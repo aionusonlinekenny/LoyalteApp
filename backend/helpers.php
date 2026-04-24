@@ -66,8 +66,13 @@ function uuid4(): string {
 // ─── CORS headers ─────────────────────────────────────────────────────────────
 
 function set_cors_headers(): void {
-    header('Access-Control-Allow-Origin: ' . CORS_ORIGIN);
-    header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    // Allow the website and Android app (no origin header = mobile app)
+    $allowed = [CORS_ORIGIN, 'https://stonephovaldosta.com'];
+    if (!$origin || in_array($origin, $allowed, true)) {
+        header('Access-Control-Allow-Origin: ' . ($origin ?: CORS_ORIGIN));
+    }
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization');
     header('Content-Type: application/json; charset=utf-8');
 }

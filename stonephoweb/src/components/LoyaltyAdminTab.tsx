@@ -583,7 +583,7 @@ const CloverSettings: React.FC<{ token: string }> = ({ token }) => {
           <div>
             <p className="text-sm font-semibold text-blue-900 mb-1">Clover Webhook URL</p>
             <code className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded block break-all">
-              http://23.125.89.153/loyalteapp/backend/api/clover/webhook
+              https://www.stonephovaldosta.com/loyalteapp/backend/api/clover/webhook
             </code>
             <p className="text-xs text-blue-700 mt-2">
               Paste this URL in your Clover Developer Dashboard → App → Webhooks.
