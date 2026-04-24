@@ -1,5 +1,6 @@
 <?php
 // POST /api/clover/webhook          Clover webhook — no auth (verified by appId)
+// GET  /api/clover/webhook          Clover webhook URL verification
 // GET  /api/clover/config           get Clover config (staff)
 // PUT  /api/clover/config           save Clover config (staff)
 // GET  /api/clover/logs             recent payment logs (staff)
@@ -40,6 +41,14 @@ function clover_api(string $cfg_env, string $token, string $path): ?array {
 
     if ($code !== 200 || !$body) return null;
     return json_decode($body, true);
+}
+
+// ── GET /api/clover/webhook — Clover verification challenge ──────────────────
+if ($method === 'GET' && $id === 'webhook') {
+    $code = $_GET['verificationCode'] ?? '';
+    header('Content-Type: text/plain');
+    echo $code;
+    exit;
 }
 
 // ── POST /api/clover/webhook ─────────────────────────────────────────────────
