@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -11,11 +12,13 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +44,15 @@ fun CustomerProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.adjustSuccess) {
+        uiState.adjustSuccess?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearAdjustSuccess()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -48,6 +60,13 @@ fun CustomerProfileScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (uiState.customer != null) {
+                        IconButton(onClick = viewModel::openAdjustDialog) {
+                            Icon(Icons.Default.Tune, contentDescription = "Adjust Points")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -67,7 +86,8 @@ fun CustomerProfileScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         when {
             uiState.isLoading -> FullScreenLoading()
@@ -210,6 +230,112 @@ fun CustomerProfileScreen(
             }
         }
     }
+
+    // Adjust Points dialog
+    if (uiState.showAdjustDialog) {
+        AdjustPointsDialog(
+            isAdjusting = uiState.isAdjusting,
+            error = uiState.adjustError,
+            onDismiss = viewModel::closeAdjustDialog,
+            onConfirm = { delta, desc -> viewModel.adjustPoints(delta, desc) }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdjustPointsDialog(
+    isAdjusting: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (delta: Int, description: String) -> Unit
+) {
+    var deltaText by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var deltaError by remember { mutableStateOf(false) }
+
+    val delta = deltaText.trim().toIntOrNull()
+
+    AlertDialog(
+        onDismissRequest = { if (!isAdjusting) onDismiss() },
+        title = { Text("Adjust Points", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Enter a positive number to add points, negative to deduct.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Quick preset buttons
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(-50, -10, +10, +50, +100).forEach { preset ->
+                        val label = if (preset > 0) "+$preset" else "$preset"
+                        FilterChip(
+                            selected = delta == preset,
+                            onClick = { deltaText = preset.toString() },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = deltaText,
+                    onValueChange = { deltaText = it; deltaError = false },
+                    label = { Text("Points *") },
+                    placeholder = { Text("e.g. +50 or -20") },
+                    singleLine = true,
+                    isError = deltaError,
+                    supportingText = if (deltaError) ({ Text("Enter a non-zero number") }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Reason (optional)") },
+                    placeholder = { Text("Staff adjustment") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (error != null) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val d = deltaText.trim().toIntOrNull()
+                    if (d == null || d == 0) {
+                        deltaError = true
+                    } else {
+                        onConfirm(d, description)
+                    }
+                },
+                enabled = !isAdjusting
+            ) {
+                if (isAdjusting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Apply")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isAdjusting) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable
