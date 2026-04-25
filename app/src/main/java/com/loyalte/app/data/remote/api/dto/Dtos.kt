@@ -146,7 +146,22 @@ data class KioskClaimResponse(
     @SerializedName("points_earned") val pointsEarned: Int?,
     @SerializedName("new_total") val newTotal: Int?,
     val tier: String?,
-    val amount: String?
+    val amount: String?,
+    val rewards: List<RewardDto>?
+)
+
+data class KioskRedeemRequest(
+    val phone: String,
+    @SerializedName("reward_id") val rewardId: String
+)
+
+data class KioskRedeemResponse(
+    val success: Boolean,
+    val message: String?,
+    @SerializedName("reward_name") val rewardName: String?,
+    @SerializedName("points_used") val pointsUsed: Int?,
+    @SerializedName("new_points") val newPoints: Int?,
+    val tier: String?
 )
 
 // ─── Simple Response ──────────────────────────────────────────────────────────

@@ -90,4 +90,7 @@ interface LoyalteApiService {
 
     @POST("kiosk/claim")
     suspend fun kioskClaim(@Body body: KioskClaimRequest): Response<KioskClaimResponse>
+
+    @POST("kiosk/redeem")
+    suspend fun kioskRedeem(@Body body: KioskRedeemRequest): Response<KioskRedeemResponse>
 }
