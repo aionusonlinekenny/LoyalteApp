@@ -132,6 +132,23 @@ data class RedemptionsResponse(
     val message: String?
 )
 
+// ─── Kiosk ───────────────────────────────────────────────────────────────────
+
+data class KioskClaimRequest(
+    val phone: String
+)
+
+data class KioskClaimResponse(
+    val success: Boolean,
+    val status: String?,
+    val message: String?,
+    val customer: CustomerDto?,
+    @SerializedName("points_earned") val pointsEarned: Int?,
+    @SerializedName("new_total") val newTotal: Int?,
+    val tier: String?,
+    val amount: String?
+)
+
 // ─── Simple Response ──────────────────────────────────────────────────────────
 
 data class SimpleResponse(

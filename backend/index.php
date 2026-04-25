@@ -44,6 +44,9 @@ switch ($resource) {
     case 'clover':
         require __DIR__ . '/controllers/clover.php';
         break;
+    case 'kiosk':
+        require __DIR__ . '/controllers/kiosk.php';
+        break;
     default:
         json_error('Not found', 404);
 }

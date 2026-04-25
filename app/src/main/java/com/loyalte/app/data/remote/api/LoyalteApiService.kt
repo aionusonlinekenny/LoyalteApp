@@ -85,4 +85,9 @@ interface LoyalteApiService {
 
     @GET("receipt_codes")
     suspend fun getReceiptCodes(): Response<ReceiptCodesResponse>
+
+    // ── Kiosk ─────────────────────────────────────────────────────────────────
+
+    @POST("kiosk/claim")
+    suspend fun kioskClaim(@Body body: KioskClaimRequest): Response<KioskClaimResponse>
 }

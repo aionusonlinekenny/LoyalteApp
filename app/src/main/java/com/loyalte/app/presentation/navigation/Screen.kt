@@ -17,4 +17,6 @@ sealed class Screen(val route: String) {
         const val ARG_CUSTOMER_ID = "customerId"
         fun createRoute(customerId: String) = "rewards/$customerId"
     }
+
+    object Kiosk : Screen("kiosk")
 }
