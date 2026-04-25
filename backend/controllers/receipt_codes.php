@@ -37,19 +37,24 @@ if ($method === 'POST' && $id === 'claim_payment') {
 
     $db->beginTransaction();
     try {
-        // Lock the payment log row to prevent race conditions
-        $logStmt = $db->prepare('SELECT * FROM clover_payment_logs WHERE payment_id=? FOR UPDATE');
-        $logStmt->execute(array($paymentId));
+        // Check logs by payment_id OR order_id (QR on receipt may encode either)
+        $logStmt = $db->prepare(
+            'SELECT * FROM clover_payment_logs WHERE payment_id=? OR order_id=? FOR UPDATE'
+        );
+        $logStmt->execute(array($paymentId, $paymentId));
         $logRow = $logStmt->fetch();
 
         // Already claimed → abort
         if ($logRow && (int)$logRow['points_awarded'] > 0 && $logRow['customer_id'] !== null) {
             $db->rollBack();
-            json_error('Payment ID này đã được dùng để nhận điểm rồi.');
+            json_error('Receipt này đã được dùng để nhận điểm rồi.');
         }
 
+        // Resolve canonical payment_id (log may store real payment_id even if we searched by order_id)
+        $resolvedPaymentId = $logRow ? $logRow['payment_id'] : $paymentId;
+
         if ($logRow && (int)$logRow['amount_cents'] > 0) {
-            // Have the amount cached in our logs
+            // Amount cached in our logs — use it directly
             $amountCents = (int)$logRow['amount_cents'];
             $merchantId  = $logRow['merchant_id'] ?: $mId;
         } else {
@@ -59,26 +64,44 @@ if ($method === 'POST' && $id === 'claim_payment') {
                 json_error('Hệ thống chưa kết nối Clover. Vui lòng liên hệ nhân viên.');
             }
             $base    = ($env === 'production') ? 'https://api.clover.com' : 'https://apisandbox.dev.clover.com';
-            $ch      = curl_init($base . "/v3/merchants/{$mId}/payments/{$paymentId}");
-            curl_setopt_array($ch, array(
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 10,
-                CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $accessToken, 'Accept: application/json'),
-            ));
+            $headers = array('Authorization: Bearer ' . $accessToken, 'Accept: application/json');
+
+            // ① Try as Payment ID
+            $ch = curl_init($base . "/v3/merchants/{$mId}/payments/{$paymentId}");
+            curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>$headers));
             $apiBody = curl_exec($ch);
             $apiCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($apiCode === 404) {
-                $db->rollBack();
-                json_error('Payment ID không tìm thấy. Vui lòng kiểm tra lại.');
+            if ($apiCode === 200 && $apiBody) {
+                $payment     = json_decode($apiBody, true);
+                $amountCents = (int)(isset($payment['amount']) ? $payment['amount'] : 0);
+                $resolvedPaymentId = $paymentId;
+            } else {
+                // ② Fallback: treat scanned value as Order ID
+                $ch = curl_init($base . "/v3/merchants/{$mId}/orders/{$paymentId}/payments");
+                curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>$headers));
+                $apiBody = curl_exec($ch);
+                $apiCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($apiCode === 200 && $apiBody) {
+                    $elements = json_decode($apiBody, true);
+                    $payments = isset($elements['elements']) ? $elements['elements'] : array();
+                    foreach ($payments as $p) {
+                        if ((int)(isset($p['amount']) ? $p['amount'] : 0) > 0) {
+                            $amountCents       = (int)$p['amount'];
+                            $resolvedPaymentId = isset($p['id']) ? $p['id'] : $paymentId;
+                            break;
+                        }
+                    }
+                }
+
+                if ($amountCents <= 0) {
+                    $db->rollBack();
+                    json_error('Không tìm thấy thông tin thanh toán. Vui lòng liên hệ nhân viên.');
+                }
             }
-            if ($apiCode !== 200 || !$apiBody) {
-                $db->rollBack();
-                json_error('Không thể xác minh Payment ID. Vui lòng thử lại sau.');
-            }
-            $payment     = json_decode($apiBody, true);
-            $amountCents = (int)(isset($payment['amount']) ? $payment['amount'] : 0);
         }
 
         if ($amountCents <= 0) {
@@ -105,21 +128,25 @@ if ($method === 'POST' && $id === 'claim_payment') {
         $db->prepare(
             'INSERT INTO loyalty_transactions (id,customer_id,type,points,description,created_at)
              VALUES (?,?,\'EARNED\',?,?,?)'
-        )->execute(array(uuid4(), $customer['id'], $pts, 'Receipt claim: ' . $paymentId, $nowMs));
+        )->execute(array(uuid4(), $customer['id'], $pts, 'Receipt claim: ' . $resolvedPaymentId, $nowMs));
 
-        // Record in clover_payment_logs (insert or update)
+        // Record in clover_payment_logs using the resolved payment_id
         if ($logRow) {
             $db->prepare(
                 "UPDATE clover_payment_logs
                  SET customer_id=?,phone=?,amount_cents=?,points_awarded=?,status='processed',note='Website receipt claim'
                  WHERE payment_id=?"
-            )->execute(array($customer['id'], $phone, $amountCents, $pts, $paymentId));
+            )->execute(array($customer['id'], $phone, $amountCents, $pts, $logRow['payment_id']));
         } else {
             $db->prepare(
                 "INSERT INTO clover_payment_logs
-                 (payment_id,merchant_id,customer_id,phone,amount_cents,points_awarded,status,note,created_at)
-                 VALUES (?,?,?,?,?,?,'processed','Website receipt claim',?)"
-            )->execute(array($paymentId, $merchantId, $customer['id'], $phone, $amountCents, $pts, $nowMs));
+                 (payment_id,merchant_id,order_id,customer_id,phone,amount_cents,points_awarded,status,note,created_at)
+                 VALUES (?,?,?,?,?,?,?,'processed','Website receipt claim',?)"
+            )->execute(array(
+                $resolvedPaymentId, $merchantId,
+                ($resolvedPaymentId !== $paymentId) ? $paymentId : null,  // store original scan as order_id if different
+                $customer['id'], $phone, $amountCents, $pts, $nowMs
+            ));
         }
 
         $db->commit();
