@@ -10,6 +10,25 @@ header('Content-Type: text/html; charset=utf-8');
 $db  = get_db();
 $cfg = $db->query('SELECT config_key, config_val FROM clover_config')->fetchAll(PDO::FETCH_KEY_PAIR);
 
+// Handle: delete a specific failed log entry so it gets re-synced
+if (isset($_GET['retry_payment'])) {
+    $pid = preg_replace('/[^A-Z0-9]/', '', strtoupper($_GET['retry_payment']));
+    if ($pid) {
+        $db->prepare("DELETE FROM clover_payment_logs WHERE payment_id = ? AND status IN ('no_customer','error')")->execute([$pid]);
+        echo "<p style='color:green;font-family:sans-serif'>Deleted failed log for $pid — reload to re-sync.</p>";
+    }
+    exit;
+}
+
+// Handle: reset last_sync_at to N hours ago so we re-fetch older payments
+if (isset($_GET['reset_hours'])) {
+    $h = max(1, min(72, (int)$_GET['reset_hours']));
+    $ts = (int)(microtime(true) * 1000) - ($h * 3600 * 1000);
+    $db->prepare("INSERT INTO clover_config (config_key,config_val,updated_at) VALUES ('last_sync_at',?,?) ON DUPLICATE KEY UPDATE config_val=VALUES(config_val),updated_at=VALUES(updated_at)")->execute([$ts, $ts]);
+    echo "<p style='color:green;font-family:sans-serif'>Reset last_sync_at to $h hours ago — <a href='clover_sync_now.php'>run sync now</a>.</p>";
+    exit;
+}
+
 $token        = $cfg['access_token']    ?? '';
 $mId          = $cfg['merchant_id']     ?? '';
 $env          = $cfg['environment']     ?? 'sandbox';
@@ -62,20 +81,29 @@ foreach ($payments as $payment) {
 
     $phone = null;
     if ($orderId) {
-        $ch2  = curl_init($base . "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers");
+        $ch2  = curl_init($base . "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
         curl_setopt_array($ch2, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>10,CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token,'Accept: application/json']]);
         $ob   = curl_exec($ch2); curl_close($ch2);
         $ord  = json_decode($ob, true);
         foreach ($ord['customers']['elements'] ?? [] as $cc) {
+            // Try direct phoneNumber first, then nested phoneNumbers.elements
             $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+            if (!$raw) {
+                foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                    $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                    if ($raw) break;
+                }
+            }
             if ($raw) { $phone = $raw; break; }
         }
     }
 
     if (!$phone) {
+        // Debug: show raw order JSON so we can see what Clover actually returned
+        $debugDump = isset($ord) ? htmlspecialchars(json_encode($ord, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)) : 'no order fetch attempted';
         $db->prepare('INSERT INTO clover_payment_logs (payment_id,merchant_id,order_id,amount_cents,points_awarded,status,note,created_at) VALUES (?,?,?,?,0,"no_customer","No phone on order",?)')->execute([$paymentId,$mId,$orderId,$amountCents,$nowMs]);
         $noPhone++;
-        $rows .= "<tr><td>$paymentId</td><td>$" . number_format($amountCents/100,2) . "</td><td style='color:orange'>No phone</td><td>0</td></tr>";
+        $rows .= "<tr><td>$paymentId</td><td>$" . number_format($amountCents/100,2) . "</td><td style='color:orange'>No phone — <details><summary>Raw order JSON</summary><pre style='font-size:11px;max-height:300px;overflow:auto'>$debugDump</pre></details></td><td>0</td></tr>";
         continue;
     }
 
@@ -128,5 +156,13 @@ $db->prepare("INSERT INTO clover_config (config_key,config_val,updated_at) VALUE
 <table><thead><tr><th>Payment ID</th><th>Amount</th><th>Result</th><th>Points</th></tr></thead>
 <tbody><?= $rows ?: '<tr><td colspan="4" style="text-align:center;color:gray">No payments in last 24 hours</td></tr>' ?></tbody>
 </table>
+<div style="margin-top:30px;padding:14px;background:#fff3e0;border:1px solid #ffb74d;border-radius:8px;font-family:sans-serif;font-size:14px">
+  <b>Re-sync a failed payment:</b>
+  <a href="?retry_payment=9M9M1573VZFER" style="margin-left:8px;background:#1565c0;color:#fff;padding:4px 12px;border-radius:4px;text-decoration:none">Retry 9M9M1573VZFER</a>
+  &nbsp;or reset sync window:
+  <a href="?reset_hours=6" style="background:#4caf50;color:#fff;padding:4px 10px;border-radius:4px;text-decoration:none">Last 6h</a>
+  <a href="?reset_hours=24" style="margin-left:4px;background:#4caf50;color:#fff;padding:4px 10px;border-radius:4px;text-decoration:none">Last 24h</a>
+  <a href="?reset_hours=48" style="margin-left:4px;background:#4caf50;color:#fff;padding:4px 10px;border-radius:4px;text-decoration:none">Last 48h</a>
+</div>
 <p style="color:#999;margin-top:30px">⚠️ Delete this file (clover_sync_now.php) from your server after testing.</p>
 </body></html>

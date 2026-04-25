@@ -64,13 +64,19 @@ foreach ($payments as $payment) {
     // Get customer phone from order
     $phone = null;
     if ($orderId) {
-        $ch2 = curl_init($base . "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers");
+        $ch2 = curl_init($base . "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
         curl_setopt_array($ch2, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10,
             CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token, 'Accept: application/json']]);
         $ob  = curl_exec($ch2); curl_close($ch2);
         $ord = json_decode($ob, true);
         foreach ($ord['customers']['elements'] ?? [] as $cc) {
             $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+            if (!$raw) {
+                foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                    $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                    if ($raw) break;
+                }
+            }
             if ($raw) { $phone = $raw; break; }
         }
     }

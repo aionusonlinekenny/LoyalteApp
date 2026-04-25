@@ -123,15 +123,17 @@ if ($method === 'POST' && $id === 'webhook') {
             // Get customer phone from order
             $phone = null;
             if ($orderId) {
-                $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers");
+                $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
                 $customers = $order['customers']['elements'] ?? [];
                 foreach ($customers as $cloverCustomer) {
-                    $rawPhone = $cloverCustomer['phoneNumber'] ?? '';
-                    if ($rawPhone) {
-                        // Normalise: keep digits only
-                        $phone = preg_replace('/\D/', '', $rawPhone);
-                        break;
+                    $raw = preg_replace('/\D/', '', $cloverCustomer['phoneNumber'] ?? '');
+                    if (!$raw) {
+                        foreach ($cloverCustomer['phoneNumbers']['elements'] ?? [] as $pn) {
+                            $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                            if ($raw) break;
+                        }
                     }
+                    if ($raw) { $phone = $raw; break; }
                 }
             }
 
@@ -288,10 +290,16 @@ if ($method === 'POST' && $id === 'sync') {
         // Get customer phone from order
         $phone = null;
         if ($orderId) {
-            $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers");
+            $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
             $cloverCustomers = $order['customers']['elements'] ?? [];
             foreach ($cloverCustomers as $cc) {
                 $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+                if (!$raw) {
+                    foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                        $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                        if ($raw) break;
+                    }
+                }
                 if ($raw) { $phone = $raw; break; }
             }
         }
