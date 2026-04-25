@@ -32,7 +32,7 @@ $lastSync = (int)($cfg['last_sync_at'] ?? 0);
 if (!$lastSync) $lastSync = $nowMs - (2 * 60 * 60 * 1000); // default: last 2 hours
 
 // Fetch payments since last sync
-$url = $base . "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order&limit=200";
+$url = $base . "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order,customer,customer.phoneNumbers&limit=200";
 $ch  = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
@@ -61,9 +61,24 @@ foreach ($payments as $payment) {
     $check->execute([$paymentId]);
     if ($check->fetch()) { $skipped++; continue; }
 
-    // Get customer phone from order
+    // Get customer phone — first from payment.customer, then order.customers
     $phone = null;
-    if ($orderId) {
+
+    // Step 1: payment.customer (expanded in the main fetch)
+    if (!empty($payment['customer'])) {
+        $cc  = $payment['customer'];
+        $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+        if (!$raw) {
+            foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                if ($raw) break;
+            }
+        }
+        if ($raw) $phone = $raw;
+    }
+
+    // Step 2: fallback — order.customers
+    if (!$phone && $orderId) {
         $ch2 = curl_init($base . "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
         curl_setopt_array($ch2, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10,
             CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$token, 'Accept: application/json']]);

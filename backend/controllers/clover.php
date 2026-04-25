@@ -106,8 +106,8 @@ if ($method === 'POST' && $id === 'webhook') {
             $check->execute([$paymentId]);
             if ($check->fetch()) continue;
 
-            // Fetch payment details from Clover
-            $payment = clover_api($env, $token, "/v3/merchants/{$mId}/payments/{$paymentId}?expand=order");
+            // Fetch payment details — expand customer directly on payment
+            $payment = clover_api($env, $token, "/v3/merchants/{$mId}/payments/{$paymentId}?expand=order,customer,customer.phoneNumbers");
 
             if (!$payment) {
                 $db->prepare(
@@ -120,9 +120,22 @@ if ($method === 'POST' && $id === 'webhook') {
             $amountCents = (int)($payment['amount'] ?? 0);
             $orderId     = $payment['order']['id'] ?? null;
 
-            // Get customer phone from order
+            // Step 1: customer attached directly to payment (Clover Rewards phone entry)
             $phone = null;
-            if ($orderId) {
+            if (!empty($payment['customer'])) {
+                $cc  = $payment['customer'];
+                $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+                if (!$raw) {
+                    foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                        $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                        if ($raw) break;
+                    }
+                }
+                if ($raw) $phone = $raw;
+            }
+
+            // Step 2: fallback — order.customers
+            if (!$phone && $orderId) {
                 $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
                 $customers = $order['customers']['elements'] ?? [];
                 foreach ($customers as $cloverCustomer) {
@@ -264,7 +277,7 @@ if ($method === 'POST' && $id === 'sync') {
     if (!$lastSync) $lastSync = $nowMs - (24 * 60 * 60 * 1000); // 24h ago
 
     $result = clover_api($env, $token,
-        "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order&limit=100"
+        "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order,customer,customer.phoneNumbers&limit=100"
     );
 
     if ($result === null) json_error('Failed to connect to Clover API. Check your access token and merchant ID.');
@@ -287,9 +300,22 @@ if ($method === 'POST' && $id === 'sync') {
         $check->execute([$paymentId]);
         if ($check->fetch()) { $skipped++; continue; }
 
-        // Get customer phone from order
+        // Step 1: customer on payment (Clover Rewards phone entry)
         $phone = null;
-        if ($orderId) {
+        if (!empty($payment['customer'])) {
+            $cc  = $payment['customer'];
+            $raw = preg_replace('/\D/', '', $cc['phoneNumber'] ?? '');
+            if (!$raw) {
+                foreach ($cc['phoneNumbers']['elements'] ?? [] as $pn) {
+                    $raw = preg_replace('/\D/', '', $pn['phoneNumber'] ?? '');
+                    if ($raw) break;
+                }
+            }
+            if ($raw) $phone = $raw;
+        }
+
+        // Step 2: fallback — order.customers
+        if (!$phone && $orderId) {
             $order = clover_api($env, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
             $cloverCustomers = $order['customers']['elements'] ?? [];
             foreach ($cloverCustomers as $cc) {

@@ -102,7 +102,7 @@ if (!$token || !$mId) {
 $lastSync = (int)($cfg['last_sync_at'] ?? 0);
 if (!$lastSync) $lastSync = $nowMs - (24 * 60 * 60 * 1000);
 
-$r = clover_get($base, $token, "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order&limit=100");
+$r = clover_get($base, $token, "/v3/merchants/{$mId}/payments?filter=createdTime%3E{$lastSync}&expand=order,customer,customer.phoneNumbers&limit=100");
 if ($r['code'] !== 200) {
     die("<h2 style='color:red'>❌ Clover API error (HTTP {$r['code']})</h2><pre>" . htmlspecialchars($r['raw']) . "</pre>");
 }
@@ -126,25 +126,19 @@ foreach ($payments as $payment) {
     }
 
     $phone = null;
-    $ord   = null;
 
-    // ── Step 1: try order.customers (the usual path) ──────────────────────
-    if ($orderId) {
+    // ── Step 1: payment.customer — Clover attaches loyalty customer here ──
+    if (!empty($payment['customer'])) {
+        $phone = extract_phone($payment['customer']);
+    }
+
+    // ── Step 2: fallback — order.customers (explicit Clover customer) ─────
+    if (!$phone && $orderId) {
         $r2 = clover_get($base, $token, "/v3/merchants/{$mId}/orders/{$orderId}?expand=customers,customers.phoneNumbers");
         $ord = $r2['data'];
         foreach ($ord['customers']['elements'] ?? [] as $cc) {
             $raw = extract_phone($cc);
             if ($raw) { $phone = $raw; break; }
-        }
-    }
-
-    // ── Step 2: try payment.customer (Clover sometimes attaches here) ─────
-    if (!$phone) {
-        $r3 = clover_get($base, $token, "/v3/merchants/{$mId}/payments/{$paymentId}?expand=customer,customer.phoneNumbers");
-        $pmtData = $r3['data'];
-        if (!empty($pmtData['customer'])) {
-            $raw = extract_phone($pmtData['customer']);
-            if ($raw) $phone = $raw;
         }
     }
 
