@@ -86,9 +86,9 @@ foreach ($payments as $payment) {
     $customer = $stmt->fetch();
 
     if (!$customer) {
-        $db->prepare('INSERT INTO clover_payment_logs (payment_id,merchant_id,order_id,phone,amount_cents,points_awarded,status,note,created_at) VALUES (?,?,?,?,?,0,"no_customer","Not in loyalty",?)')->execute([$paymentId,$mId,$orderId,$phone,$amountCents,$nowMs]);
-        $noPhone++;
-        continue;
+        // Auto-create new loyalty member for first-time customers
+        $cloverName = '';
+        $customer = find_or_create_loyalty_customer($db, $phone, $cloverName, $nowMs);
     }
 
     $pts = intdiv($amountCents, 100) * $ptsPerDollar;

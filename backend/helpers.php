@@ -54,6 +54,28 @@ function tier_from_points(int $points): string {
     return 'BRONZE';
 }
 
+// ─── Auto-create loyalty customer ────────────────────────────────────────────
+
+function find_or_create_loyalty_customer(PDO $db, string $phone, string $name, int $nowMs): array {
+    $stmt = $db->prepare('SELECT id, points FROM customers WHERE phone=? OR phone=? LIMIT 1');
+    $stmt->execute([$phone, ltrim($phone, '1')]);
+    $cust = $stmt->fetch();
+    if ($cust) return $cust;
+
+    // Generate next sequential member ID
+    $row   = $db->query("SELECT MAX(CAST(SUBSTRING(member_id, 5) AS UNSIGNED)) AS mx FROM customers WHERE member_id LIKE 'LYL-%'")->fetch();
+    $seq   = (int)($row['mx'] ?? 0) + 1;
+    $memId = sprintf('LYL-%06d', $seq);
+    $cid   = uuid4();
+
+    $db->prepare(
+        'INSERT INTO customers (id, member_id, name, phone, tier, points, qr_code, created_at, updated_at)
+         VALUES (?, ?, ?, ?, \'BRONZE\', 0, ?, ?, ?)'
+    )->execute([$cid, $memId, $name ?: 'New Member', $phone, $memId, $nowMs, $nowMs]);
+
+    return ['id' => $cid, 'points' => 0];
+}
+
 // ─── UUID v4 ──────────────────────────────────────────────────────────────────
 
 function uuid4(): string {

@@ -152,12 +152,13 @@ if ($method === 'POST' && $id === 'webhook') {
             $customer = $stmt->fetch();
 
             if (!$customer) {
-                $db->prepare(
-                    'INSERT INTO clover_payment_logs
-                     (payment_id, merchant_id, order_id, phone, amount_cents, points_awarded, status, note, created_at)
-                     VALUES (?, ?, ?, ?, ?, 0, \'no_customer\', \'Phone not in loyalty program\', ?)'
-                )->execute([$paymentId, $mId, $orderId, $phone, $amountCents, $nowMs]);
-                continue;
+                // Auto-create new loyalty member for first-time customers
+                $cloverName = '';
+                foreach ($customers as $cloverCustomer) {
+                    $fn = trim(($cloverCustomer['firstName'] ?? '') . ' ' . ($cloverCustomer['lastName'] ?? ''));
+                    if ($fn) { $cloverName = $fn; break; }
+                }
+                $customer = find_or_create_loyalty_customer($db, $phone, $cloverName, $nowMs);
             }
 
             // Award points: 1 point per dollar (integer division)
@@ -312,13 +313,8 @@ if ($method === 'POST' && $id === 'sync') {
         $customer = $stmt->fetch();
 
         if (!$customer) {
-            $db->prepare(
-                'INSERT INTO clover_payment_logs
-                 (payment_id, merchant_id, order_id, phone, amount_cents, points_awarded, status, note, created_at)
-                 VALUES (?, ?, ?, ?, ?, 0, \'no_customer\', \'Phone not in loyalty program\', ?)'
-            )->execute([$paymentId, $mId, $orderId, $phone, $amountCents, $nowMs]);
-            $noPhone++;
-            continue;
+            // Auto-create new loyalty member for first-time customers
+            $customer = find_or_create_loyalty_customer($db, $phone, '', $nowMs);
         }
 
         $pts = intdiv($amountCents, 100) * $ptsPerDollar;
