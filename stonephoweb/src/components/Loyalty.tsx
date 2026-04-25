@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Star, Gift, Phone, CheckCircle, AlertCircle, Loader, Award, Camera, X, ScanLine } from 'lucide-react';
-import jsQR from 'jsqr';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 
 const API = '/loyalteapp/backend/api';
@@ -40,89 +40,54 @@ function extractId(raw: string): string {
   return trimmed.toUpperCase();
 }
 
-// ── Camera scanner hook (jsQR — works on iOS Safari + all browsers) ───────────
+// ── Camera scanner hook (@zxing/browser — Code128 + QR, all browsers) ────────
 function useCameraScanner(onDetected: (value: string) => void) {
-  const [scanning, setScanning] = useState(false);
-  const [camError, setCamError] = useState('');
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const rafRef    = useRef<number>(0);
-  const activeRef = useRef(false);
+  const [scanning, setScanning]   = useState(false);
+  const [camError, setCamError]   = useState('');
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   const stopScan = useCallback(() => {
-    activeRef.current = false;
-    cancelAnimationFrame(rafRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
+    controlsRef.current?.stop();
+    controlsRef.current = null;
     setScanning(false);
   }, []);
 
-  const startScan = useCallback(async () => {
+  const startScan = useCallback(() => {
     setCamError('');
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCamError('Camera not supported in this browser. Please type the Payment ID manually.');
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-      });
-      streamRef.current = stream;
-      activeRef.current = true;
-      setScanning(true);
-    } catch {
-      setCamError('Camera access denied. Please allow camera access and try again.');
-    }
+    setScanning(true);
   }, []);
 
-  // Attach stream + run jsQR scan loop
   useEffect(() => {
-    if (!scanning || !videoRef.current || !canvasRef.current) return;
-    const video  = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
-
-    video.srcObject = streamRef.current;
-    video.play().catch(() => {});
-
-    const tick = () => {
-      if (!activeRef.current) return;
-      if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
-        if (code?.data) {
-          onDetected(extractId(code.data));
-          stopScan();
-          return;
+    if (!scanning || !videoRef.current) return;
+    const reader = new BrowserMultiFormatReader();
+    reader
+      .decodeFromVideoDevice(undefined, videoRef.current, (result, _err, controls) => {
+        if (result) {
+          onDetected(extractId(result.getText()));
+          controls.stop();
+          controlsRef.current = null;
+          setScanning(false);
         }
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
+      })
+      .then(controls => { controlsRef.current = controls; })
+      .catch(() => {
+        setCamError('Camera access denied. Please allow camera access and try again.');
+        setScanning(false);
+      });
 
-    video.addEventListener('loadeddata', tick, { once: true });
-    return () => {
-      video.removeEventListener('loadeddata', tick);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [scanning, onDetected, stopScan]);
+    return () => { controlsRef.current?.stop(); };
+  }, [scanning, onDetected]);
 
-  // Cleanup on unmount
   useEffect(() => () => stopScan(), [stopScan]);
 
-  return { scanning, camError, startScan, stopScan, videoRef, canvasRef };
+  return { scanning, camError, startScan, stopScan, videoRef };
 }
 
 // ── Camera modal overlay ──────────────────────────────────────────────────────
-function CameraModal({ scanning, videoRef, canvasRef, onClose }: {
+function CameraModal({ scanning, videoRef, onClose }: {
   scanning: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
   onClose: () => void;
 }) {
   if (!scanning) return null;
@@ -135,14 +100,12 @@ function CameraModal({ scanning, videoRef, canvasRef, onClose }: {
           playsInline
           className="w-full aspect-square object-cover"
         />
-        {/* Hidden canvas used by jsQR to decode frames */}
-        <canvas ref={canvasRef} className="hidden" />
         {/* Scan frame guide */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-52 h-52 border-2 border-red-500 rounded-lg" />
+          <div className="w-64 h-32 border-2 border-red-500 rounded-lg" />
         </div>
         <p className="absolute bottom-14 w-full text-center text-white text-sm px-4">
-          Point the QR code on your receipt inside the frame
+          Point the barcode on your receipt inside the frame
         </p>
         <button
           onClick={onClose}
@@ -251,7 +214,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
     setPaymentId(value);
   }, []);
 
-  const { scanning, camError, startScan, stopScan, videoRef, canvasRef } = useCameraScanner(handleScanDetected);
+  const { scanning, camError, startScan, stopScan, videoRef } = useCameraScanner(handleScanDetected);
 
   const handleClaimPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -604,7 +567,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
       </div>
 
       {/* Camera overlay */}
-      <CameraModal scanning={scanning} videoRef={videoRef} canvasRef={canvasRef} onClose={stopScan} />
+      <CameraModal scanning={scanning} videoRef={videoRef} onClose={stopScan} />
     </section>
   );
 };
