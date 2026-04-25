@@ -62,14 +62,18 @@ function useCameraScanner(onDetected: (value: string) => void) {
     if (!scanning || !videoRef.current) return;
     const reader = new BrowserMultiFormatReader();
     reader
-      .decodeFromVideoDevice(undefined, videoRef.current, (result, _err, controls) => {
-        if (result) {
-          onDetected(extractId(result.getText()));
-          controls.stop();
-          controlsRef.current = null;
-          setScanning(false);
+      .decodeFromConstraints(
+        { video: { facingMode: { ideal: 'environment' } } },
+        videoRef.current,
+        (result, _err, controls) => {
+          if (result) {
+            onDetected(extractId(result.getText()));
+            controls.stop();
+            controlsRef.current = null;
+            setScanning(false);
+          }
         }
-      })
+      )
       .then(controls => { controlsRef.current = controls; })
       .catch(() => {
         setCamError('Camera access denied. Please allow camera access and try again.');
