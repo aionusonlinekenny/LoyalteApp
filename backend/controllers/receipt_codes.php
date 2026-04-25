@@ -5,6 +5,137 @@
 
 $db = get_db();
 
+// ── POST /api/receipt_codes/claim_payment  (public — claim by Payment ID) ─────
+if ($method === 'POST' && $id === 'claim_payment') {
+    $body      = json_body();
+    $phone     = preg_replace('/\D/', '', isset($body['phone'])      ? $body['phone']      : '');
+    $paymentId = strtoupper(trim(       isset($body['payment_id'])   ? $body['payment_id'] : ''));
+
+    if (strlen($phone) < 10)  json_error('Số điện thoại không hợp lệ');
+    if (!$paymentId)           json_error('payment_id là bắt buộc');
+
+    $nowMs   = (int)(microtime(true) * 1000);
+    $phone10 = ltrim($phone, '1');
+    $phone11 = '1' . $phone10;
+
+    // Find customer by phone (try all 3 variants)
+    $stmt = $db->prepare('SELECT * FROM customers WHERE phone=? OR phone=? OR phone=? LIMIT 1');
+    $stmt->execute(array($phone, $phone10, $phone11));
+    $customer = $stmt->fetch();
+    if (!$customer) json_error('Số điện thoại chưa đăng ký. Vui lòng đăng ký tại quầy để tích điểm.');
+
+    // Load Clover config
+    $cfgRows      = $db->query('SELECT config_key, config_val FROM clover_config')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $cfg          = $cfgRows ?: array();
+    $accessToken  = isset($cfg['access_token'])   ? $cfg['access_token']   : '';
+    $mId          = isset($cfg['merchant_id'])     ? $cfg['merchant_id']    : '';
+    $env          = isset($cfg['environment'])     ? $cfg['environment']    : 'sandbox';
+    $ptsPerDollar = max(1, (int)(isset($cfg['points_per_dollar']) ? $cfg['points_per_dollar'] : 1));
+
+    $amountCents = 0;
+    $merchantId  = $mId;
+
+    $db->beginTransaction();
+    try {
+        // Lock the payment log row to prevent race conditions
+        $logStmt = $db->prepare('SELECT * FROM clover_payment_logs WHERE payment_id=? FOR UPDATE');
+        $logStmt->execute(array($paymentId));
+        $logRow = $logStmt->fetch();
+
+        // Already claimed → abort
+        if ($logRow && (int)$logRow['points_awarded'] > 0 && $logRow['customer_id'] !== null) {
+            $db->rollBack();
+            json_error('Payment ID này đã được dùng để nhận điểm rồi.');
+        }
+
+        if ($logRow && (int)$logRow['amount_cents'] > 0) {
+            // Have the amount cached in our logs
+            $amountCents = (int)$logRow['amount_cents'];
+            $merchantId  = $logRow['merchant_id'] ?: $mId;
+        } else {
+            // Fetch from Clover API
+            if (!$accessToken || !$mId) {
+                $db->rollBack();
+                json_error('Hệ thống chưa kết nối Clover. Vui lòng liên hệ nhân viên.');
+            }
+            $base    = ($env === 'production') ? 'https://api.clover.com' : 'https://apisandbox.dev.clover.com';
+            $ch      = curl_init($base . "/v3/merchants/{$mId}/payments/{$paymentId}");
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_HTTPHEADER     => array('Authorization: Bearer ' . $accessToken, 'Accept: application/json'),
+            ));
+            $apiBody = curl_exec($ch);
+            $apiCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($apiCode === 404) {
+                $db->rollBack();
+                json_error('Payment ID không tìm thấy. Vui lòng kiểm tra lại.');
+            }
+            if ($apiCode !== 200 || !$apiBody) {
+                $db->rollBack();
+                json_error('Không thể xác minh Payment ID. Vui lòng thử lại sau.');
+            }
+            $payment     = json_decode($apiBody, true);
+            $amountCents = (int)(isset($payment['amount']) ? $payment['amount'] : 0);
+        }
+
+        if ($amountCents <= 0) {
+            $db->rollBack();
+            json_error('Thanh toán có giá trị $0 hoặc không hợp lệ.');
+        }
+
+        $pts    = intdiv($amountCents, 100) * $ptsPerDollar;
+        if ($pts <= 0) {
+            $db->rollBack();
+            json_error('Giá trị thanh toán quá nhỏ để nhận điểm (tối thiểu $1).');
+        }
+
+        // Lock customer row and award points
+        $lockStmt = $db->prepare('SELECT points FROM customers WHERE id=? FOR UPDATE');
+        $lockStmt->execute(array($customer['id']));
+        $locked   = $lockStmt->fetch();
+        $newPts   = (int)$locked['points'] + $pts;
+        $tier     = tier_from_points($newPts);
+
+        $db->prepare('UPDATE customers SET points=?,tier=?,updated_at=? WHERE id=?')
+           ->execute(array($newPts, $tier, $nowMs, $customer['id']));
+
+        $db->prepare(
+            'INSERT INTO loyalty_transactions (id,customer_id,type,points,description,created_at)
+             VALUES (?,?,\'EARNED\',?,?,?)'
+        )->execute(array(uuid4(), $customer['id'], $pts, 'Receipt claim: ' . $paymentId, $nowMs));
+
+        // Record in clover_payment_logs (insert or update)
+        if ($logRow) {
+            $db->prepare(
+                "UPDATE clover_payment_logs
+                 SET customer_id=?,phone=?,amount_cents=?,points_awarded=?,status='processed',note='Website receipt claim'
+                 WHERE payment_id=?"
+            )->execute(array($customer['id'], $phone, $amountCents, $pts, $paymentId));
+        } else {
+            $db->prepare(
+                "INSERT INTO clover_payment_logs
+                 (payment_id,merchant_id,customer_id,phone,amount_cents,points_awarded,status,note,created_at)
+                 VALUES (?,?,?,?,?,?,'processed','Website receipt claim',?)"
+            )->execute(array($paymentId, $merchantId, $customer['id'], $phone, $amountCents, $pts, $nowMs));
+        }
+
+        $db->commit();
+    } catch (Exception $e) {
+        $db->rollBack();
+        json_error('Không thể cộng điểm. Vui lòng thử lại.', 500);
+    }
+
+    json_success(array(
+        'points_added' => $pts,
+        'new_points'   => $newPts,
+        'tier'         => $tier,
+        'amount'       => number_format($amountCents / 100, 2),
+    ));
+}
+
 // ── Customer claim (no staff auth needed) ─────────────────────────────────────
 if ($method === 'POST' && $id === 'claim') {
     $body       = json_body();
