@@ -19,4 +19,5 @@ sealed class Screen(val route: String) {
     }
 
     object Kiosk : Screen("kiosk")
+    object ManageRewards : Screen("manage_rewards")
 }

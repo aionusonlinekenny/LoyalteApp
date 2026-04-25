@@ -53,8 +53,14 @@ if ($method === 'GET' && $id === null) {
     $qr    = $_GET['qr']    ?? null;
 
     if ($phone) {
-        $stmt = $db->prepare('SELECT * FROM customers WHERE phone = ? LIMIT 1');
-        $stmt->execute([$phone]);
+        // Normalize: strip non-digits, try 10-digit and 11-digit variants
+        $digits = preg_replace('/\D/', '', $phone);
+        $local  = ltrim($digits, '1');   // 10-digit without country code
+        $long   = '1' . $local;          // 11-digit with country code
+        $stmt = $db->prepare(
+            'SELECT * FROM customers WHERE phone = ? OR phone = ? OR phone = ? LIMIT 1'
+        );
+        $stmt->execute([$digits, $local, $long]);
         $c = $stmt->fetch();
         if (!$c) json_error('Customer not found', 404);
         json_success(['customer' => $c]);

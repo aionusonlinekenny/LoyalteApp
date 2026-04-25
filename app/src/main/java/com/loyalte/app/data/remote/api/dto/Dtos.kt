@@ -164,6 +164,22 @@ data class KioskRedeemResponse(
     val tier: String?
 )
 
+// ─── Reward Management ───────────────────────────────────────────────────────
+
+data class RewardResponse(
+    val success: Boolean,
+    val reward: RewardDto?,
+    val message: String?
+)
+
+data class SaveRewardRequest(
+    val name: String,
+    val description: String,
+    @SerializedName("points_required") val pointsRequired: Int,
+    val category: String,
+    @SerializedName("is_active") val isActive: Int
+)
+
 // ─── Simple Response ──────────────────────────────────────────────────────────
 
 data class SimpleResponse(

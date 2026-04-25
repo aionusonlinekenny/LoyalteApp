@@ -3,6 +3,7 @@ package com.loyalte.app.presentation.navigation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
@@ -29,6 +30,7 @@ import com.loyalte.app.presentation.screens.customer.CustomerListScreen
 import com.loyalte.app.presentation.screens.customer.CustomerProfileScreen
 import com.loyalte.app.presentation.screens.home.HomeScreen
 import com.loyalte.app.presentation.screens.kiosk.KioskScreen
+import com.loyalte.app.presentation.screens.rewards.ManageRewardsScreen
 import com.loyalte.app.presentation.screens.rewards.RewardsScreen
 import com.loyalte.app.presentation.screens.scan.QrScanScreen
 import kotlinx.coroutines.launch
@@ -43,6 +45,7 @@ private val drawerItems = listOf(
     DrawerItem("Home", Icons.Default.Home, Screen.Home.route),
     DrawerItem("Kiosk Mode", Icons.Default.TouchApp, Screen.Kiosk.route),
     DrawerItem("Customer List", Icons.Default.Group, Screen.CustomerList.route),
+    DrawerItem("Manage Rewards", Icons.Default.CardGiftcard, Screen.ManageRewards.route),
     DrawerItem("Receipt Code History", Icons.Default.Receipt, Screen.CodeHistory.route)
 )
 
@@ -232,6 +235,10 @@ private fun AppNavHost(
 
         composable(Screen.Kiosk.route) {
             KioskScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.ManageRewards.route) {
+            ManageRewardsScreen(onOpenDrawer = openDrawer)
         }
 
         composable(

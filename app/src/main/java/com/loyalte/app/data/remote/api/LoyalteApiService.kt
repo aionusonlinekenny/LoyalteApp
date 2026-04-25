@@ -69,6 +69,27 @@ interface LoyalteApiService {
     @GET("rewards")
     suspend fun getActiveRewards(): Response<RewardsResponse>
 
+    @GET("rewards")
+    suspend fun getAllRewards(
+        @Query("active") active: String
+    ): Response<RewardsResponse>
+
+    @POST("rewards")
+    suspend fun createReward(
+        @Body body: SaveRewardRequest
+    ): Response<RewardResponse>
+
+    @PUT("rewards/{id}")
+    suspend fun updateReward(
+        @Path("id") id: String,
+        @Body body: SaveRewardRequest
+    ): Response<RewardResponse>
+
+    @DELETE("rewards/{id}")
+    suspend fun deleteReward(
+        @Path("id") id: String
+    ): Response<SimpleResponse>
+
     // ── Redemptions ───────────────────────────────────────────────────────────
 
     @GET("redemptions")
