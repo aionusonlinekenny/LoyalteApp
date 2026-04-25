@@ -39,6 +39,12 @@ interface LoyalteApiService {
         @Body body: CreateCustomerRequest
     ): Response<CustomerResponse>
 
+    @PUT("customers/{id}")
+    suspend fun updateCustomer(
+        @Path("id") id: String,
+        @Body body: UpdateCustomerRequest
+    ): Response<CustomerResponse>
+
     @PUT("customers/{id}/points")
     suspend fun updatePoints(
         @Path("id") id: String,

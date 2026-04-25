@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loyalte.app.data.remote.api.LoyalteApiService
 import com.loyalte.app.data.remote.api.dto.AddPointsRequest
+import com.loyalte.app.data.remote.api.dto.UpdateCustomerRequest
 import com.loyalte.app.domain.model.Customer
 import com.loyalte.app.domain.model.LoyaltyTransaction
 import com.loyalte.app.domain.repository.CustomerRepository
@@ -34,10 +35,16 @@ class CustomerProfileViewModel @Inject constructor(
         val transactions: List<LoyaltyTransaction> = emptyList(),
         val isLoading: Boolean = true,
         val errorMessage: String? = null,
+        // Adjust points dialog
         val showAdjustDialog: Boolean = false,
         val isAdjusting: Boolean = false,
         val adjustError: String? = null,
-        val adjustSuccess: String? = null
+        val adjustSuccess: String? = null,
+        // Edit info dialog
+        val showEditDialog: Boolean = false,
+        val isSaving: Boolean = false,
+        val editError: String? = null,
+        val editSuccess: String? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -72,6 +79,8 @@ class CustomerProfileViewModel @Inject constructor(
             }
         }
     }
+
+    // ── Adjust points ─────────────────────────────────────────────────────────
 
     fun openAdjustDialog() {
         _uiState.update { it.copy(showAdjustDialog = true, adjustError = null, adjustSuccess = null) }
@@ -121,6 +130,47 @@ class CustomerProfileViewModel @Inject constructor(
         _uiState.update { it.copy(adjustSuccess = null) }
     }
 
+    // ── Edit customer info ────────────────────────────────────────────────────
+
+    fun openEditDialog() {
+        _uiState.update { it.copy(showEditDialog = true, editError = null) }
+    }
+
+    fun closeEditDialog() {
+        _uiState.update { it.copy(showEditDialog = false, editError = null) }
+    }
+
+    fun saveCustomerInfo(name: String, phone: String, email: String) {
+        _uiState.update { it.copy(isSaving = true, editError = null) }
+        viewModelScope.launch {
+            try {
+                val resp = api.updateCustomer(
+                    customerId,
+                    UpdateCustomerRequest(
+                        name = name.trim(),
+                        phone = phone.trim(),
+                        email = email.trim().ifBlank { null }
+                    )
+                )
+                if (resp.isSuccessful && resp.body()?.success == true) {
+                    _uiState.update {
+                        it.copy(isSaving = false, showEditDialog = false, editSuccess = "Customer info updated")
+                    }
+                    loadProfile()
+                } else {
+                    _uiState.update {
+                        it.copy(isSaving = false, editError = resp.body()?.message ?: "Update failed")
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSaving = false, editError = "Connection error") }
+            }
+        }
+    }
+
+    fun clearEditSuccess() {
+        _uiState.update { it.copy(editSuccess = null) }
+    }
+
     fun getCustomerId(): String = customerId
 }
-

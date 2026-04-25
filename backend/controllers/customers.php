@@ -114,6 +114,37 @@ if ($method === 'DELETE' && $id !== null) {
     json_success(['message' => 'Customer deleted']);
 }
 
+// ── PUT /api/customers/{id} — update info ─────────────────────────────────────
+if ($method === 'PUT' && $id !== null && $sub === null) {
+    $body  = json_body();
+    $name  = trim($body['name']  ?? '');
+    $phone = preg_replace('/\D/', '', trim($body['phone'] ?? ''));
+    $email = isset($body['email']) ? (trim($body['email']) ?: null) : null;
+
+    if (!$name)  json_error('Name is required');
+    if (!$phone) json_error('Phone is required');
+
+    // Verify customer exists
+    $stmt = $db->prepare('SELECT id FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    if (!$stmt->fetch()) json_error('Customer not found', 404);
+
+    // Check phone uniqueness (excluding this customer)
+    $local = ltrim($phone, '1');
+    $long  = '1' . $local;
+    $dup = $db->prepare('SELECT id FROM customers WHERE (phone=? OR phone=? OR phone=?) AND id != ? LIMIT 1');
+    $dup->execute([$phone, $local, $long, $id]);
+    if ($dup->fetch()) json_error('Phone number already registered to another customer');
+
+    $nowMs = (int)(microtime(true) * 1000);
+    $db->prepare('UPDATE customers SET name=?, phone=?, email=?, updated_at=? WHERE id=?')
+       ->execute([$name, $phone, $email, $nowMs, $id]);
+
+    $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    json_success(['customer' => $stmt->fetch()]);
+}
+
 // ── PUT /api/customers/{id}/points ────────────────────────────────────────────
 if ($method === 'PUT' && $id !== null && $sub === 'points') {
     $body   = json_body();

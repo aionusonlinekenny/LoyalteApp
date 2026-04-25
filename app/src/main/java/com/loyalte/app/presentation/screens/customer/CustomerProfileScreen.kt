@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -53,6 +54,13 @@ fun CustomerProfileScreen(
         }
     }
 
+    LaunchedEffect(uiState.editSuccess) {
+        uiState.editSuccess?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearEditSuccess()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -64,6 +72,9 @@ fun CustomerProfileScreen(
                 },
                 actions = {
                     if (uiState.customer != null) {
+                        IconButton(onClick = viewModel::openEditDialog) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Info")
+                        }
                         IconButton(onClick = viewModel::openAdjustDialog) {
                             Icon(Icons.Default.Tune, contentDescription = "Adjust Points")
                         }
@@ -231,6 +242,17 @@ fun CustomerProfileScreen(
         }
     }
 
+    // Edit customer info dialog
+    if (uiState.showEditDialog && uiState.customer != null) {
+        EditCustomerDialog(
+            customer = uiState.customer!!,
+            isSaving = uiState.isSaving,
+            error = uiState.editError,
+            onDismiss = viewModel::closeEditDialog,
+            onConfirm = { name, phone, email -> viewModel.saveCustomerInfo(name, phone, email) }
+        )
+    }
+
     // Adjust Points dialog
     if (uiState.showAdjustDialog) {
         AdjustPointsDialog(
@@ -240,6 +262,96 @@ fun CustomerProfileScreen(
             onConfirm = { delta, desc -> viewModel.adjustPoints(delta, desc) }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditCustomerDialog(
+    customer: com.loyalte.app.domain.model.Customer,
+    isSaving: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, phone: String, email: String) -> Unit
+) {
+    var name  by remember { mutableStateOf(customer.name) }
+    var phone by remember { mutableStateOf(customer.phone) }
+    var email by remember { mutableStateOf(customer.email ?: "") }
+    var nameError  by remember { mutableStateOf(false) }
+    var phoneError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSaving) onDismiss() },
+        title = { Text("Edit Customer Info", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; nameError = false },
+                    label = { Text("Full Name *") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    singleLine = true,
+                    isError = nameError,
+                    supportingText = if (nameError) ({ Text("Name is required") }) else null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it; phoneError = false },
+                    label = { Text("Phone *") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                    singleLine = true,
+                    isError = phoneError,
+                    supportingText = if (phoneError) ({ Text("Phone is required") }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email (optional)") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (error != null) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmedName  = name.trim()
+                    val trimmedPhone = phone.trim()
+                    if (trimmedName.isEmpty()) { nameError = true; return@Button }
+                    if (trimmedPhone.isEmpty()) { phoneError = true; return@Button }
+                    onConfirm(trimmedName, trimmedPhone, email)
+                },
+                enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

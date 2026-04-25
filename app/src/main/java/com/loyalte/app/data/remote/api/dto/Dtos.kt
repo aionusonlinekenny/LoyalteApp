@@ -61,6 +61,12 @@ data class AddPointsRequest(
     val description: String
 )
 
+data class UpdateCustomerRequest(
+    val name: String,
+    val phone: String,
+    val email: String?
+)
+
 // ─── Transaction ──────────────────────────────────────────────────────────────
 
 data class TransactionDto(
