@@ -13,7 +13,36 @@ $nowMs = (int)(microtime(true) * 1000);
 $MERCHANT_UUID = '5037be2d-0bd7-4f41-8707-68f9c2014d37';
 $LOCATION_UUID = 'c11c519a-407a-4ae0-9815-ce97e8691b26';
 $CE_BASE       = 'https://api.clover.com/customer-engagement/1';
-$INVENTORY_PATH = "/clover/inventory/{$LOCATION_UUID}";
+// Known endpoints (inventory = menu items, not members)
+$INVENTORY_PATH  = "/clover/inventory/{$LOCATION_UUID}";
+$PROGRAM_UUID    = '0020168f-ec91-4f72-89e9-6fad1da43319';
+
+// All candidate member endpoints to probe
+$MEMBER_PATHS = [
+    "/clover/membership/{$LOCATION_UUID}?page=0&pageSize=999",
+    "/clover/memberships/{$LOCATION_UUID}?page=0&pageSize=999",
+    "/clover/members/{$LOCATION_UUID}?page=0&pageSize=999",
+    "/clover/membership/{$MERCHANT_UUID}?page=0&pageSize=999",
+    "/clover/memberships/{$MERCHANT_UUID}?page=0&pageSize=999",
+    "/clover/members/{$MERCHANT_UUID}?page=0&pageSize=999",
+    "/clover/programs/{$PROGRAM_UUID}/members?page=0&pageSize=999",
+    "/clover/programs/{$PROGRAM_UUID}/memberships?page=0&pageSize=999",
+    "/clover/product/{$LOCATION_UUID}/membership?page=0&pageSize=999",
+    "/clover/product/{$LOCATION_UUID}/memberships?page=0&pageSize=999",
+    "/social/memberships?merchantUuid={$MERCHANT_UUID}&page=0&pageSize=999",
+    "/social/members/{$MERCHANT_UUID}?page=0&pageSize=999",
+    "/user/membershipState/{$LOCATION_UUID}?page=0&pageSize=999",
+    // Stats / overview (to understand data structure)
+    "/clover/product/{$LOCATION_UUID}/overview",
+    "/clover/product/{$LOCATION_UUID}/stats",
+    "/clover/product/{$LOCATION_UUID}/stats?includePerks=false",
+    "/clover/merchants/{$MERCHANT_UUID}/overview",
+    // History / visits
+    "/clover/history/{$LOCATION_UUID}?page=0&pageSize=20",
+    "/clover/history/{$MERCHANT_UUID}?page=0&pageSize=20",
+    "/clover/visits/{$LOCATION_UUID}?page=0&pageSize=20",
+    "/clover/product/{$LOCATION_UUID}/history?page=0&pageSize=20",
+];
 
 // Token pasted from DevTools (Authorization: Bearer xxxxx on the inventory request)
 $LAUNCH_TOKEN = trim($_POST['launch_token'] ?? '');
@@ -39,7 +68,29 @@ $probeResult = null;
 $importResult = null;
 
 if ($LAUNCH_TOKEN) {
-    // First, probe page 0 with pageSize=5 to inspect structure
+    // Probe all member candidate endpoints in parallel
+    $mh = curl_multi_init();
+    $handles = [];
+    foreach ($MEMBER_PATHS as $k => $path) {
+        $ch = curl_init($CE_BASE . $path);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>15,
+            CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$LAUNCH_TOKEN,'Accept: application/json']]);
+        $handles[$k] = $ch;
+        curl_multi_add_handle($mh, $ch);
+    }
+    do { $s = curl_multi_exec($mh, $act); if ($act) curl_multi_select($mh); }
+    while ($act && $s == CURLM_OK);
+    $memberProbes = [];
+    foreach ($handles as $k => $ch) {
+        $raw = curl_multi_getcontent($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $memberProbes[$k] = ['code'=>$code,'data'=>($raw?json_decode($raw,true):null),'raw'=>$raw];
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+    }
+    curl_multi_close($mh);
+
+    // Also probe original inventory endpoint (already known to work)
     $probeUrl = $CE_BASE . $INVENTORY_PATH . '?page=0&pageSize=5';
     $probeResult = ce_get($probeUrl, $LAUNCH_TOKEN);
 
@@ -164,16 +215,38 @@ ol li{margin-bottom:8px;line-height:1.6}
   <b>Token expires ~1 hour</b> after the dashboard was loaded, so do this quickly!
 </div>
 
-<!-- ── Probe result ───────────────────────────────────────────────────────── -->
-<?php if ($probeResult): ?>
-<h3>Probe Result (page=0&amp;pageSize=5)</h3>
-<?php if ($probeResult['code'] === 200): ?>
-<div class="box ok">
-  ✅ <b>HTTP 200 — token works!</b> Response structure:
-</div>
-<pre><?= htmlspecialchars(json_encode($probeResult['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
+<!-- ── Member endpoint probe results ─────────────────────────────────────── -->
+<?php if (isset($memberProbes)): ?>
+<h3>Member Endpoint Probe (<?= count($MEMBER_PATHS) ?> paths)</h3>
+<?php
+$found200 = array_filter($memberProbes, fn($r)=>$r['code']===200);
+if ($found200): ?>
+<div class="box ok">✅ Some endpoints returned 200! Check the green rows.</div>
 <?php else: ?>
-<div class="box err">❌ HTTP <?= $probeResult['code'] ?> — token may be expired or wrong. Try getting a fresh one.</div>
+<div class="box warn">⚠️ No 200 yet — see raw responses for clues.</div>
+<?php endif; ?>
+<table><thead><tr><th>Path</th><th>HTTP</th><th>Response (first 300 chars)</th></tr></thead><tbody>
+<?php foreach ($MEMBER_PATHS as $k => $path):
+    $r = $memberProbes[$k] ?? ['code'=>0,'data'=>null,'raw'=>''];
+    $preview = $r['data'] ? json_encode($r['data'], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) : $r['raw'];
+    $color = $r['code']===200?'background:#e8f5e9':($r['code']===404?'color:#bbb':'');
+?>
+<tr style="<?= $color ?>">
+  <td><code style="font-size:11px"><?= htmlspecialchars($path) ?></code></td>
+  <td><b><?= $r['code'] ?></b></td>
+  <td><pre><?= htmlspecialchars(mb_substr($preview??'',0,300)) ?></pre></td>
+</tr>
+<?php endforeach; ?>
+</tbody></table>
+<?php endif; ?>
+
+<!-- ── Inventory probe (known working) ──────────────────────────────────── -->
+<?php if ($probeResult): ?>
+<h3>Token Check (inventory endpoint — menu items, not members)</h3>
+<?php if ($probeResult['code'] === 200): ?>
+<div class="box ok">✅ Token is valid (HTTP 200 on inventory endpoint).</div>
+<?php else: ?>
+<div class="box err">❌ HTTP <?= $probeResult['code'] ?> — token expired. Get a fresh one from DevTools.</div>
 <pre><?= htmlspecialchars(json_encode($probeResult['data'], JSON_PRETTY_PRINT)) ?></pre>
 <?php endif; ?>
 <?php endif; ?>
