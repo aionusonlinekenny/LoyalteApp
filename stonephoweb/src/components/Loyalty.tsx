@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Star, Gift, Phone, CheckCircle, AlertCircle, Loader, Award, Camera, X, ScanLine } from 'lucide-react';
+import jsQR from 'jsqr';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 
 const API = '/loyalteapp/backend/api';
@@ -39,11 +40,12 @@ function extractId(raw: string): string {
   return trimmed.toUpperCase();
 }
 
-// ── Camera scanner hook ───────────────────────────────────────────────────────
+// ── Camera scanner hook (jsQR — works on iOS Safari + all browsers) ───────────
 function useCameraScanner(onDetected: (value: string) => void) {
-  const [scanning, setScanning]   = useState(false);
-  const [camError, setCamError]   = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [camError, setCamError] = useState('');
   const videoRef  = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef    = useRef<number>(0);
   const activeRef = useRef(false);
@@ -58,8 +60,8 @@ function useCameraScanner(onDetected: (value: string) => void) {
 
   const startScan = useCallback(async () => {
     setCamError('');
-    if (!('BarcodeDetector' in window)) {
-      setCamError('Camera scanning is not supported in this browser. Please type the Payment ID manually.');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError('Camera not supported in this browser. Please type the Payment ID manually.');
       return;
     }
     try {
@@ -70,40 +72,42 @@ function useCameraScanner(onDetected: (value: string) => void) {
       activeRef.current = true;
       setScanning(true);
     } catch {
-      setCamError('Camera access denied. Please type the Payment ID manually.');
+      setCamError('Camera access denied. Please allow camera access and try again.');
     }
   }, []);
 
-  // Attach stream and start scan loop once scanning=true
+  // Attach stream + run jsQR scan loop
   useEffect(() => {
-    if (!scanning || !videoRef.current) return;
-    const video = videoRef.current;
+    if (!scanning || !videoRef.current || !canvasRef.current) return;
+    const video  = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
     video.srcObject = streamRef.current;
     video.play().catch(() => {});
 
-    // @ts-ignore – BarcodeDetector is not in TS lib yet
-    const detector = new BarcodeDetector({
-      formats: ['qr_code', 'code_128', 'code_39', 'data_matrix', 'pdf417'],
-    });
-
-    const tick = async () => {
+    const tick = () => {
       if (!activeRef.current) return;
-      try {
-        // @ts-ignore
-        const codes: Array<{ rawValue: string }> = await detector.detect(video);
-        if (codes.length > 0) {
-          onDetected(extractId(codes[0].rawValue));
+      if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+        if (code?.data) {
+          onDetected(extractId(code.data));
           stopScan();
           return;
         }
-      } catch { /* ignore decode errors */ }
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    const onLoaded = () => { rafRef.current = requestAnimationFrame(tick); };
-    video.addEventListener('loadeddata', onLoaded);
+    video.addEventListener('loadeddata', tick, { once: true });
     return () => {
-      video.removeEventListener('loadeddata', onLoaded);
+      video.removeEventListener('loadeddata', tick);
       cancelAnimationFrame(rafRef.current);
     };
   }, [scanning, onDetected, stopScan]);
@@ -111,13 +115,14 @@ function useCameraScanner(onDetected: (value: string) => void) {
   // Cleanup on unmount
   useEffect(() => () => stopScan(), [stopScan]);
 
-  return { scanning, camError, startScan, stopScan, videoRef };
+  return { scanning, camError, startScan, stopScan, videoRef, canvasRef };
 }
 
 // ── Camera modal overlay ──────────────────────────────────────────────────────
-function CameraModal({ scanning, videoRef, onClose }: {
+function CameraModal({ scanning, videoRef, canvasRef, onClose }: {
   scanning: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
   onClose: () => void;
 }) {
   if (!scanning) return null;
@@ -130,12 +135,14 @@ function CameraModal({ scanning, videoRef, onClose }: {
           playsInline
           className="w-full aspect-square object-cover"
         />
-        {/* Scan frame overlay */}
+        {/* Hidden canvas used by jsQR to decode frames */}
+        <canvas ref={canvasRef} className="hidden" />
+        {/* Scan frame guide */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-48 h-48 border-2 border-red-500 rounded-lg" />
+          <div className="w-52 h-52 border-2 border-red-500 rounded-lg" />
         </div>
         <p className="absolute bottom-14 w-full text-center text-white text-sm px-4">
-          Point at the barcode or QR code on your receipt
+          Point the QR code on your receipt inside the frame
         </p>
         <button
           onClick={onClose}
@@ -244,7 +251,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
     setPaymentId(value);
   }, []);
 
-  const { scanning, camError, startScan, stopScan, videoRef } = useCameraScanner(handleScanDetected);
+  const { scanning, camError, startScan, stopScan, videoRef, canvasRef } = useCameraScanner(handleScanDetected);
 
   const handleClaimPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -597,7 +604,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
       </div>
 
       {/* Camera overlay */}
-      <CameraModal scanning={scanning} videoRef={videoRef} onClose={stopScan} />
+      <CameraModal scanning={scanning} videoRef={videoRef} canvasRef={canvasRef} onClose={stopScan} />
     </section>
   );
 };
