@@ -1,5 +1,5 @@
 <?php
-// Clover Rewards (Perka CE API) — full member import
+// Clover Rewards member import — uses /clover/inventory/{locationUuid}
 // DELETE after use!
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
@@ -10,304 +10,207 @@ header('Content-Type: text/html; charset=utf-8');
 $db    = get_db();
 $nowMs = (int)(microtime(true) * 1000);
 
-// ── Hardcoded credentials ─────────────────────────────────────────────────────
-$MERCHANT_UUID     = '5037be2d-0bd7-4f41-8707-68f9c2014d37';
-$LOCATION_UUID     = 'c11c519a-407a-4ae0-9815-ce97e8691b26';
-$REFRESH_TOKEN     = 'UgaJl8vu9N3S7_Ef_5-12nGXXhMTwLrEalyLXt2ozZK4pDRtn6IkC3sOsjyP1QWc';
-$REFRESH_TOK_UUID  = '505e75c1-5961-4ea6-a4c9-d86b57262c77';
-$PERKA_USER_UUID   = '20738e96-8c7e-4b3c-8e1c-643f49860708';
-$CE_BASE           = 'https://api.clover.com/customer-engagement/1';
+$MERCHANT_UUID = '5037be2d-0bd7-4f41-8707-68f9c2014d37';
+$LOCATION_UUID = 'c11c519a-407a-4ae0-9815-ce97e8691b26';
+$CE_BASE       = 'https://api.clover.com/customer-engagement/1';
+$INVENTORY_PATH = "/clover/inventory/{$LOCATION_UUID}";
 
-// ── HTTP helper ───────────────────────────────────────────────────────────────
-function ce(string $method, string $url, string $token, array $body = []): array {
+// Token pasted from DevTools (Authorization: Bearer xxxxx on the inventory request)
+$LAUNCH_TOKEN = trim($_POST['launch_token'] ?? '');
+
+function ce_get(string $url, string $token): array {
     $ch = curl_init($url);
-    $hdrs = ['Accept: application/json', 'Content-Type: application/json'];
-    if ($token) $hdrs[] = 'Authorization: Bearer ' . $token;
-    $opts = [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>20,
-             CURLOPT_CUSTOMREQUEST=>$method, CURLOPT_HTTPHEADER=>$hdrs];
-    if ($body) $opts[CURLOPT_POSTFIELDS] = json_encode($body);
-    curl_setopt_array($ch, $opts);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 30,
+        CURLOPT_HTTPHEADER     => [
+            'Authorization: Bearer ' . $token,
+            'Accept: application/json',
+        ],
+    ]);
     $raw  = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    return ['code'=>$code, 'data'=>($raw ? json_decode($raw,true) : null), 'raw'=>$raw];
+    return ['code' => $code, 'data' => ($raw ? json_decode($raw, true) : null), 'raw' => $raw];
 }
 
-// ── Step 1: Try multiple refresh methods ──────────────────────────────────────
-$refreshBase = $CE_BASE . '/user/refresh/token?merchantUuid=' . $MERCHANT_UUID;
-$refreshAttempts = [
-    // Most likely: POST with refresh token as Bearer auth
-    ['POST', $refreshBase, $REFRESH_TOKEN, []],
-    ['POST', $refreshBase, $REFRESH_TOKEN, ['refreshTokenUuid' => $REFRESH_TOK_UUID]],
-    ['POST', $refreshBase, $REFRESH_TOKEN, ['refreshToken'     => $REFRESH_TOKEN]],
-    ['POST', $refreshBase, $REFRESH_TOKEN, ['perkaUserUuid'    => $PERKA_USER_UUID, 'refreshTokenUuid' => $REFRESH_TOK_UUID]],
-    // Try GET with query param
-    ['GET',  $refreshBase . '&refreshToken=' . urlencode($REFRESH_TOKEN), $REFRESH_TOKEN, []],
-    // Try without any auth (token in body only)
-    ['POST', $refreshBase, '', ['refreshToken' => $REFRESH_TOKEN, 'merchantUuid' => $MERCHANT_UUID]],
-];
-
-$SESSION_TOKEN = null;
-$refreshLog    = [];
-foreach ($refreshAttempts as [$method, $url, $tok, $body]) {
-    $r = ce($method, $url, $tok, $body);
-    $label = $method . ' body=' . json_encode($body);
-    $refreshLog[] = ['label'=>$label,'code'=>$r['code'],'data'=>$r['data']];
-    if ($r['code'] === 200 && !empty($r['data']['data']['authorizationToken'])) {
-        foreach ($r['data']['data']['authorizationToken'] as $t) {
-            if (($t['type']??'') === 'SESSION') { $SESSION_TOKEN = $t['token']; break; }
-        }
-        if ($SESSION_TOKEN) break;
-    }
-}
-
-// ── Step 2: Get launch token ──────────────────────────────────────────────────
-$LAUNCH_TOKEN = null;
-$launchCode   = null;
-if ($SESSION_TOKEN) {
-    $launchUrl = $CE_BASE . '/clover/product/launch/' . $LOCATION_UUID . '?productType=REWARDS';
-    $r2 = ce('GET', $launchUrl, $SESSION_TOKEN);
-    $launchCode = $r2['code'];
-    if ($r2['code'] === 200 && $r2['data']) {
-        $d = $r2['data'];
-        $LAUNCH_TOKEN = $d['token'] ?? $d['accessToken'] ?? $d['access_token'] ??
-                        ($d['data']['authorizationToken'][0]['token'] ?? null) ?? null;
-    }
-    // If no separate launch token, use session token
-    if (!$LAUNCH_TOKEN) $LAUNCH_TOKEN = $SESSION_TOKEN;
-}
-
-// ── Step 3: Probe member endpoints ────────────────────────────────────────────
-// Build token candidates (deduplicated, non-null)
-$tokCandidates = array_unique(array_filter([$LAUNCH_TOKEN, $SESSION_TOKEN, $REFRESH_TOKEN]));
-
-// All plausible paths — primary candidates first based on the launch URL pattern
-$memberPaths = [
-    // PRIMARY: same resource as launch but without 'launch' path segment
-    "/clover/product/{$LOCATION_UUID}?page=0&pageSize=999",
-    "/clover/product/{$LOCATION_UUID}/members?page=0&pageSize=999",
-    "/clover/product/{$LOCATION_UUID}/memberships?page=0&pageSize=999",
-    "/clover/product/{$LOCATION_UUID}/customers?page=0&pageSize=999",
-    "/clover/product/{$LOCATION_UUID}/users?page=0&pageSize=999",
-    // Merchant-based
-    "/clover/merchants/{$MERCHANT_UUID}/members?page=0&pageSize=999",
-    "/clover/merchants/{$MERCHANT_UUID}/memberships?page=0&pageSize=999",
-    "/clover/merchants/{$MERCHANT_UUID}?page=0&pageSize=999",
-    // User / social namespace
-    "/user/memberships/{$LOCATION_UUID}?page=0&pageSize=999",
-    "/user/memberships?merchantLocationUuid={$LOCATION_UUID}&page=0&pageSize=999",
-    "/user/memberships?merchantUuid={$MERCHANT_UUID}&page=0&pageSize=999",
-    "/social/groups/{$LOCATION_UUID}/memberships?page=0&pageSize=999",
-    "/social/memberships/{$LOCATION_UUID}?page=0&pageSize=999",
-    // Overview / stats for structure hints
-    "/clover/product/{$LOCATION_UUID}/overview",
-    "/clover/product/{$LOCATION_UUID}/stats",
-];
-
-$allProbes = [];
-foreach ($memberPaths as $path) {
-    foreach ($tokCandidates as $tok) {
-        $allProbes[] = ['url'=>$CE_BASE.$path, 'path'=>$path,
-                        'tokPreview'=>substr($tok,0,12).'...', 'token'=>$tok];
-    }
-}
-
-// Parallel curl
-$mh = curl_multi_init();
-$handles = [];
-foreach ($allProbes as $k => $p) {
-    $ch = curl_init($p['url']);
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>15,
-        CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$p['token'],'Accept: application/json']]);
-    $handles[$k] = $ch;
-    curl_multi_add_handle($mh, $ch);
-}
-do { $s = curl_multi_exec($mh, $act); if ($act) curl_multi_select($mh); }
-while ($act && $s == CURLM_OK);
-$probeResults = [];
-foreach ($handles as $k => $ch) {
-    $raw = curl_multi_getcontent($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $probeResults[$k] = ['code'=>$code, 'data'=>($raw?json_decode($raw,true):null), 'raw'=>$raw];
-    curl_multi_remove_handle($mh, $ch);
-    curl_close($ch);
-}
-curl_multi_close($mh);
-
-// Find working endpoint
-function extract_list(array $data): array {
-    foreach (['memberships','members','elements','users','customers','data','items','results'] as $key) {
-        if (isset($data[$key]) && is_array($data[$key]) && count($data[$key]) > 0) return $data[$key];
-    }
-    if (isset($data[0]) && is_array($data[0])) return $data;
-    return [];
-}
-
-$bestPath = $bestToken = $sample = null;
-foreach ($allProbes as $k => $p) {
-    $r = $probeResults[$k];
-    if ($r['code'] !== 200 || !$r['data']) continue;
-    $els = extract_list($r['data']);
-    if (count($els) > 0) {
-        $bestPath  = $p['path'];
-        $bestToken = $p['token'];
-        $sample    = $els[0];
-        break;
-    }
-}
-
-// ── Step 4: Import ─────────────────────────────────────────────────────────────
+// ── Probe / import ────────────────────────────────────────────────────────────
+$probeResult = null;
 $importResult = null;
-if (isset($_POST['do_import']) && $bestPath && $bestToken) {
-    $updated = $notFound = $noPhone = $total = 0;
-    $rows = '';
-    $page = 0;
-    $pageSize = 500;
 
-    do {
-        $url = $CE_BASE . preg_replace('/\?.*/', '', $bestPath)
-             . '?page=' . $page . '&pageSize=' . $pageSize;
-        $r = ce('GET', $url, $bestToken);
-        if ($r['code'] !== 200) break;
-        $batch = extract_list($r['data'] ?? []);
-        if (!$batch) break;
+if ($LAUNCH_TOKEN) {
+    // First, probe page 0 with pageSize=5 to inspect structure
+    $probeUrl = $CE_BASE . $INVENTORY_PATH . '?page=0&pageSize=5';
+    $probeResult = ce_get($probeUrl, $LAUNCH_TOKEN);
 
-        foreach ($batch as $m) {
-            $total++;
-            $rawPhone = preg_replace('/\D/', '',
-                $m['phone'] ?? $m['phoneNumber'] ?? $m['mobile'] ??
-                ($m['user']['phone'] ?? $m['user']['phoneNumber'] ?? '') ??
-                ($m['customer']['phone'] ?? ''));
+    if (isset($_POST['do_import']) && $probeResult['code'] === 200) {
+        $updated = $notFound = $noPhone = $total = 0;
+        $rows = '';
+        $page = 0;
+        $pageSize = 500;
 
-            $pts = (int)(
-                $m['points'] ?? $m['balance'] ?? $m['pointBalance'] ??
-                $m['loyaltyPoints'] ?? $m['rewardPoints'] ??
-                ($m['user']['points'] ?? 0)
-            );
+        do {
+            $url = $CE_BASE . $INVENTORY_PATH . '?page=' . $page . '&pageSize=' . $pageSize;
+            $r   = ce_get($url, $LAUNCH_TOKEN);
+            if ($r['code'] !== 200) {
+                $rows .= "<tr><td colspan='3' style='color:red'>❌ HTTP {$r['code']} on page {$page} — stopped.</td></tr>";
+                break;
+            }
+            $d = $r['data'];
 
-            $firstName = $m['firstName'] ?? $m['user']['firstName'] ?? '';
-            $lastName  = $m['lastName']  ?? $m['user']['lastName']  ?? '';
-            $name = trim("$firstName $lastName") ?: ($m['name'] ?? $rawPhone);
+            // Extract list — try every known field name
+            $batch = null;
+            foreach (['memberships','members','elements','users','customers','data','items','results','inventory'] as $key) {
+                if (isset($d[$key]) && is_array($d[$key])) { $batch = $d[$key]; break; }
+            }
+            if ($batch === null && isset($d[0])) $batch = $d;
+            if (!$batch) break;
 
-            if (!$rawPhone) { $noPhone++; continue; }
+            foreach ($batch as $m) {
+                $total++;
+                // Extract phone — try many field paths
+                $rawPhone = preg_replace('/\D/', '',
+                    $m['phone'] ?? $m['phoneNumber'] ?? $m['mobile'] ??
+                    ($m['user']['phone'] ?? $m['user']['phoneNumber'] ??
+                    ($m['customer']['phone'] ?? $m['consumer']['phone'] ??
+                    ($m['identity']['phone'] ?? ''))));
 
-            $stmt = $db->prepare('SELECT id, points FROM customers WHERE phone=? OR phone=? LIMIT 1');
-            $stmt->execute([$rawPhone, ltrim($rawPhone,'1')]);
-            $cust = $stmt->fetch();
+                // Extract points
+                $pts = (int)(
+                    $m['points'] ?? $m['balance'] ?? $m['pointBalance'] ??
+                    $m['loyaltyPoints'] ?? $m['rewardPoints'] ??
+                    $m['currentPoints'] ?? $m['totalPoints'] ??
+                    ($m['user']['points'] ?? $m['customer']['points'] ??
+                    ($m['loyalty']['points'] ?? 0))
+                );
 
-            if (!$cust) {
-                $notFound++;
-                $rows .= "<tr><td>".htmlspecialchars($rawPhone)."</td><td>$pts</td><td style='color:orange'>Not in loyalty DB</td></tr>";
-                continue;
+                $firstName = $m['firstName'] ?? $m['user']['firstName'] ?? $m['customer']['firstName'] ?? '';
+                $lastName  = $m['lastName']  ?? $m['user']['lastName']  ?? $m['customer']['lastName']  ?? '';
+                $name = trim("$firstName $lastName") ?: ($m['name'] ?? $m['user']['name'] ?? $rawPhone ?: '—');
+
+                if (!$rawPhone) {
+                    $noPhone++;
+                    $rows .= "<tr><td>" . htmlspecialchars($name) . "</td><td>$pts</td><td style='color:#aaa'>No phone number</td></tr>";
+                    continue;
+                }
+
+                $stmt = $db->prepare('SELECT id, points FROM customers WHERE phone=? OR phone=? LIMIT 1');
+                $stmt->execute([$rawPhone, ltrim($rawPhone, '1')]);
+                $cust = $stmt->fetch();
+
+                if (!$cust) {
+                    $notFound++;
+                    $rows .= "<tr><td>" . htmlspecialchars($name) . "</td><td>$pts</td><td style='color:orange'>Phone $rawPhone not in loyalty DB</td></tr>";
+                    continue;
+                }
+
+                $tier = tier_from_points($pts);
+                $db->prepare('UPDATE customers SET points=?,tier=?,updated_at=? WHERE id=?')
+                   ->execute([$pts, $tier, $nowMs, $cust['id']]);
+                if ($pts > 0) {
+                    $db->prepare('INSERT INTO loyalty_transactions (id,customer_id,type,points,description,created_at) VALUES (?,?,"EARNED",?,?,?)')
+                       ->execute([uuid4(), $cust['id'], $pts, 'Clover Rewards import ' . date('Y-m-d'), $nowMs]);
+                }
+                $updated++;
+                $color = $pts > 0 ? '#2e7d32' : '#888';
+                $rows .= "<tr><td>" . htmlspecialchars($name) . "</td><td>$pts</td><td style='color:$color'>✅ Set to <b>$pts</b> pts ($tier)</td></tr>";
             }
 
-            $tier = tier_from_points($pts);
-            $db->prepare('UPDATE customers SET points=?,tier=?,updated_at=? WHERE id=?')->execute([$pts,$tier,$nowMs,$cust['id']]);
-            if ($pts > 0) {
-                $db->prepare('INSERT INTO loyalty_transactions (id,customer_id,type,points,description,created_at) VALUES (?,?,"EARNED",?,?,?)')
-                   ->execute([uuid4(),$cust['id'],$pts,'Clover Rewards import '.date('Y-m-d'),$nowMs]);
-            }
-            $updated++;
-            $color = $pts > 0 ? 'green' : '#888';
-            $rows .= "<tr><td>".htmlspecialchars($name)."</td><td>$pts</td><td style='color:$color'>✅ $pts pts ($tier)</td></tr>";
-        }
-        $page++;
-    } while (count($batch) === $pageSize && $page < 20);
+            $page++;
+        } while (count($batch) === $pageSize && $page < 20);
 
-    $importResult = compact('updated','notFound','noPhone','total','rows');
-}
-
-function badge(int $c): string {
-    if ($c===200) return "<b style='color:green'>200 ✅</b>";
-    if ($c===401) return "<b style='color:#c62828'>401</b>";
-    if ($c===403) return "<b style='color:#c62828'>403</b>";
-    if ($c===404) return "<span style='color:#bbb'>404</span>";
-    if ($c===405) return "<b style='color:orange'>405</b>";
-    return "<b>$c</b>";
+        $importResult = compact('updated', 'notFound', 'noPhone', 'total', 'rows');
+    }
 }
 ?><!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Clover Rewards Import</title>
 <style>
-body{font-family:sans-serif;padding:24px;max-width:1020px;background:#fafafa}
-h2,h3{margin-bottom:4px}h3{color:#1565c0;margin-top:20px}
+body{font-family:sans-serif;padding:24px;max-width:980px;background:#fafafa}
+h2,h3{margin-bottom:4px}h3{color:#1565c0;margin-top:22px}
 table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
-th,td{padding:5px 9px;border:1px solid #ddd;vertical-align:top;text-align:left}th{background:#f0f0f0}
-pre{margin:0;font-size:11px;max-height:160px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
-.box{padding:12px 17px;border-radius:7px;margin-bottom:10px;font-size:14px}
+th,td{padding:6px 10px;border:1px solid #ddd;vertical-align:top;text-align:left}th{background:#f0f0f0}
+pre{margin:0;font-size:11px;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;background:#fff;border:1px solid #eee;padding:10px;border-radius:4px;margin-top:6px}
+.box{padding:13px 18px;border-radius:8px;margin-bottom:10px;font-size:14px}
 .ok{background:#e8f5e9;border:1px solid #a5d6a7}
 .warn{background:#fff8e1;border:1px solid #ffe082}
 .err{background:#ffebee;border:1px solid #ef9a9a}
 .info{background:#e3f2fd;border:1px solid #90caf9}
-button{padding:11px 28px;background:#2e7d32;color:#fff;border:none;border-radius:6px;font-size:15px;cursor:pointer;font-weight:bold;margin-top:10px}
-button:hover{background:#1b5e20}
+button{padding:11px 28px;border:none;border-radius:6px;font-size:15px;cursor:pointer;font-weight:bold;margin-top:10px}
+.btn-g{background:#2e7d32;color:#fff}.btn-g:hover{background:#1b5e20}
+.btn-b{background:#1565c0;color:#fff}.btn-b:hover{background:#0d47a1}
+label{display:block;font-weight:bold;font-size:13px;margin-top:14px}
+textarea{width:100%;height:55px;font-family:monospace;font-size:12px;padding:8px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px}
 code{background:#eee;padding:1px 5px;border-radius:3px;font-size:12px}
-details summary{cursor:pointer;color:#1565c0}
+ol li{margin-bottom:8px;line-height:1.6}
 </style></head><body>
 <h2>Clover Rewards Member Import</h2>
-<p style="color:#666">Merchant: <code><?= $MERCHANT_UUID ?></code> &nbsp;|&nbsp; Location: <code><?= $LOCATION_UUID ?></code></p>
+<p style="color:#666">
+  Merchant: <code><?= $MERCHANT_UUID ?></code> &nbsp;|&nbsp;
+  Location: <code><?= $LOCATION_UUID ?></code><br>
+  Endpoint: <code><?= $CE_BASE . $INVENTORY_PATH ?>?page=0&amp;pageSize=999</code>
+</p>
 
-<h3>1. Token Refresh</h3>
-<?php if ($SESSION_TOKEN): ?>
-<div class="box ok">✅ Session token obtained successfully.</div>
-<?php else: ?>
-<div class="box err">❌ All refresh attempts failed — see log below.</div>
-<?php endif; ?>
-<details><summary>Refresh attempt log (<?= count($refreshLog) ?> tries)</summary>
-<table style="margin-top:6px"><thead><tr><th>Attempt</th><th>HTTP</th><th>Response</th></tr></thead><tbody>
-<?php foreach ($refreshLog as $rl): ?>
-<tr <?= $rl['code']===200?"style='background:#f1f8e9'":'' ?>><td><code style="font-size:11px"><?= htmlspecialchars($rl['label']) ?></code></td><td><?= badge($rl['code']) ?></td><td><pre><?= htmlspecialchars(mb_substr(json_encode($rl['data'],JSON_PRETTY_PRINT),0,300)) ?></pre></td></tr>
-<?php endforeach; ?>
-</tbody></table>
-</details>
-
-<h3>2. Launch Token</h3>
-<?php if ($LAUNCH_TOKEN && $LAUNCH_TOKEN !== $SESSION_TOKEN): ?>
-<div class="box ok">✅ Launch token obtained (HTTP <?= $launchCode ?>).</div>
-<?php elseif ($SESSION_TOKEN): ?>
-<div class="box warn">⚠️ Using session token as launch token (HTTP <?= $launchCode ?> from launch endpoint).</div>
-<?php else: ?>
-<div class="box err">❌ Skipped — no session token.</div>
-<?php endif; ?>
-
-<h3>3. Member List Probe (<?= count($allProbes) ?> endpoint × token combos)</h3>
-<?php if ($bestPath): ?>
-<div class="box ok">
-  ✅ <b>Found!</b> Path: <code><?= htmlspecialchars($bestPath) ?></code><br>
-  Sample: <pre style="margin-top:6px"><?= htmlspecialchars(json_encode($sample,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE)) ?></pre>
+<!-- ── How to get the token ───────────────────────────────────────────────── -->
+<div class="box info">
+  <b>📋 How to get a fresh launch token (takes ~1 minute):</b>
+  <ol>
+    <li>Go to <b>www.clover.com/rewards/overview?client_id=1EVSVRM8SV8RC</b> (logged in as merchant)</li>
+    <li>Press <b>F12</b> → Network tab → click <b>XHR</b> or <b>All</b> filter → press <b>F5</b></li>
+    <li>In the list, find the request named <code>c11c519a-407a-4ae0-9815-ce97e8691b26?page=0&amp;pageSize=999</code></li>
+    <li>Click it → right panel → <b>Headers</b> tab → scroll to <b>Request Headers</b></li>
+    <li>Copy the value after <code>Authorization: Bearer </code> (a long string)</li>
+    <li>Paste it in the box below</li>
+  </ol>
+  <b>Token expires ~1 hour</b> after the dashboard was loaded, so do this quickly!
 </div>
+
+<!-- ── Probe result ───────────────────────────────────────────────────────── -->
+<?php if ($probeResult): ?>
+<h3>Probe Result (page=0&amp;pageSize=5)</h3>
+<?php if ($probeResult['code'] === 200): ?>
+<div class="box ok">
+  ✅ <b>HTTP 200 — token works!</b> Response structure:
+</div>
+<pre><?= htmlspecialchars(json_encode($probeResult['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></pre>
 <?php else: ?>
-<div class="box err">❌ No endpoint returned list data yet.</div>
+<div class="box err">❌ HTTP <?= $probeResult['code'] ?> — token may be expired or wrong. Try getting a fresh one.</div>
+<pre><?= htmlspecialchars(json_encode($probeResult['data'], JSON_PRETTY_PRINT)) ?></pre>
+<?php endif; ?>
 <?php endif; ?>
 
-<details><summary>Show all probe results</summary>
-<table style="margin-top:6px"><thead><tr><th>Token</th><th>Path</th><th>HTTP</th><th>Preview</th></tr></thead><tbody>
-<?php foreach ($allProbes as $k => $p):
-    $r = $probeResults[$k] ?? ['code'=>0,'data'=>null,'raw'=>''];
-    $isBest = $bestPath && $p['path']===$bestPath && $p['token']===$bestToken;
-    $preview = $r['data'] ? json_encode($r['data'],JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) : $r['raw'];
-?>
-<tr <?= $isBest?"style='background:#e8f5e9;font-weight:bold'":($r['code']===404||$r['code']===405?"style='color:#bbb'":"") ?>>
-  <td><code style="font-size:10px"><?= htmlspecialchars($p['tokPreview']) ?></code></td>
-  <td><code style="font-size:10px"><?= htmlspecialchars($p['path']) ?></code></td>
-  <td><?= badge($r['code']) ?></td>
-  <td><pre><?= htmlspecialchars(mb_substr($preview??'',0,250)) ?></pre></td>
-</tr>
-<?php endforeach; ?>
-</tbody></table>
-</details>
-
+<!-- ── Import result ──────────────────────────────────────────────────────── -->
 <?php if ($importResult): ?>
-<h3>4. Import Result</h3>
-<div class="box ok">✅ Done! Updated: <b><?= $importResult['updated'] ?></b> | Not found: <b><?= $importResult['notFound'] ?></b> | No phone: <b><?= $importResult['noPhone'] ?></b> | Total: <b><?= $importResult['total'] ?></b></div>
-<table><thead><tr><th>Customer</th><th>Points</th><th>Result</th></tr></thead>
-<tbody><?= $importResult['rows']?:'<tr><td colspan="3" style="color:#aaa">Nothing</td></tr>' ?></tbody>
+<h3>Import Result</h3>
+<div class="box ok">
+  ✅ <b>Done!</b> &nbsp;
+  Updated: <b><?= $importResult['updated'] ?></b> &nbsp;|&nbsp;
+  Not in loyalty DB: <b><?= $importResult['notFound'] ?></b> &nbsp;|&nbsp;
+  No phone: <b><?= $importResult['noPhone'] ?></b> &nbsp;|&nbsp;
+  Total members: <b><?= $importResult['total'] ?></b>
+</div>
+<table><thead><tr><th>Customer</th><th>Clover Points</th><th>Result</th></tr></thead>
+<tbody><?= $importResult['rows'] ?: '<tr><td colspan="3" style="color:#aaa">Nothing imported</td></tr>' ?></tbody>
 </table>
-<?php elseif ($bestPath): ?>
-<h3>4. Import</h3>
-<div class="box info">Found member data. Click to import all into loyalty database (Clover points will overwrite existing points).</div>
-<form method="POST"><input type="hidden" name="do_import" value="1">
-<button type="submit">⬆ Import All Members Now</button></form>
 <?php endif; ?>
+
+<!-- ── Form ────────────────────────────────────────────────────────────────── -->
+<form method="POST" style="margin-top:20px">
+  <label>Launch Token (paste from DevTools — Authorization: Bearer <i>xxxxx</i>)</label>
+  <textarea name="launch_token" required placeholder="nQVn6OD7VQNdyuV1-Of18Mxp7tlAgg..."><?= htmlspecialchars($LAUNCH_TOKEN) ?></textarea>
+
+  <?php if ($probeResult && $probeResult['code'] === 200 && !$importResult): ?>
+  <!-- Token works — show import button -->
+  <div class="box warn" style="margin-top:12px">
+    ⚠️ This will <b>overwrite</b> existing loyalty points with the Clover Rewards values.
+  </div>
+  <input type="hidden" name="do_import" value="1">
+  <button type="submit" class="btn-g">⬆ Import All Members Now</button>
+  &nbsp;&nbsp;
+  <button type="submit" formnovalidate class="btn-b" onclick="this.form.do_import.value=''">🔍 Re-probe Only</button>
+  <?php else: ?>
+  <button type="submit" class="btn-b">🔍 Test Token &amp; Preview</button>
+  <?php endif; ?>
+</form>
 
 <p style="color:#bbb;margin-top:30px;font-size:12px">⚠️ Delete clover_rewards_import.php from server after use.</p>
 </body></html>
