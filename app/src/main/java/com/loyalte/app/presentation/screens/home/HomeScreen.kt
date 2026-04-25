@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +32,6 @@ import com.loyalte.app.presentation.components.ErrorMessage
 @Composable
 fun HomeScreen(
     onCustomerFound: (customerId: String) -> Unit,
-    onScanQr: () -> Unit,
     onAddCustomer: () -> Unit,
     onOpenDrawer: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -173,44 +171,6 @@ fun HomeScreen(
                             ErrorMessage(message = uiState.errorMessage!!)
                         }
                     }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Divider(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "  OR  ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Divider(modifier = Modifier.weight(1f))
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                OutlinedButton(
-                    onClick = onScanQr,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "Scan QR Code",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
 
                 Spacer(Modifier.height(16.dp))

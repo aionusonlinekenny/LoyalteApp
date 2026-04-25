@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Star, Gift, Phone, CheckCircle, AlertCircle, Loader, Award, Camera, X, ScanLine } from 'lucide-react';
+import { Star, Phone, CheckCircle, AlertCircle, Loader, Award, Camera, X, ScanLine } from 'lucide-react';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 
@@ -127,7 +127,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobile = currentDevice === 'mobile';
 
-  const [activeTab, setActiveTab] = useState<'check' | 'claim' | 'payment'>('check');
+  const [activeTab, setActiveTab] = useState<'check' | 'payment'>('check');
 
   // ── Check Points tab ──────────────────────────────────────────────────────
   const [checkPhone, setCheckPhone] = useState('');
@@ -156,54 +156,6 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
       setCheckError('Could not connect to server. Please try again.');
     } finally {
       setCheckLoading(false);
-    }
-  };
-
-  // ── Claim Code tab ────────────────────────────────────────────────────────
-  const [claimPhone, setClaimPhone] = useState('');
-  const [claimCode, setClaimCode] = useState('');
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimSuccess, setClaimSuccess] = useState<{ points_added: number; new_points: number; tier: string } | null>(null);
-  const [claimError, setClaimError] = useState('');
-
-  const handleClaimCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setClaimLoading(true);
-    setClaimError('');
-    setClaimSuccess(null);
-
-    try {
-      const lookupRes = await fetch(`${API}/customers/lookup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: claimPhone.trim() }),
-      });
-      const lookupData = await lookupRes.json();
-      if (!lookupData.success || !lookupData.customer) {
-        setClaimError(lookupData.message || 'Phone number not found. Please register first.');
-        setClaimLoading(false);
-        return;
-      }
-
-      const claimRes = await fetch(`${API}/receipt_codes/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: claimCode.trim().toLowerCase(),
-          customer_id: lookupData.customer.id,
-        }),
-      });
-      const claimData = await claimRes.json();
-      if (claimData.success) {
-        setClaimSuccess(claimData);
-        setClaimCode('');
-      } else {
-        setClaimError(claimData.message || 'Failed to claim code.');
-      }
-    } catch {
-      setClaimError('Could not connect to server. Please try again.');
-    } finally {
-      setClaimLoading(false);
     }
   };
 
@@ -296,17 +248,6 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
               Check My Points
             </button>
             <button
-              onClick={() => setActiveTab('claim')}
-              className={`px-5 py-3 rounded-lg font-medium transition-all text-sm ${
-                activeTab === 'claim'
-                  ? 'bg-red-600 text-white shadow'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <Gift className="w-4 h-4 inline mr-2" />
-              Claim Code
-            </button>
-            <button
               onClick={() => setActiveTab('payment')}
               className={`px-5 py-3 rounded-lg font-medium transition-all text-sm ${
                 activeTab === 'payment'
@@ -384,81 +325,6 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
                       <p className="text-3xl font-black">{checkResult.points.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── CLAIM CODE TAB ── */}
-          {activeTab === 'claim' && (
-            <div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">
-                Claim Your Receipt Code
-              </h3>
-              <p className="text-gray-400 text-sm text-center mb-6">
-                Enter the 3-word code from your receipt to earn bonus points.
-              </p>
-              <form onSubmit={handleClaimCode} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Your Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={claimPhone}
-                      onChange={e => setClaimPhone(e.target.value)}
-                      placeholder="+1 (415) 555-1234"
-                      required
-                      className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Receipt Code
-                  </label>
-                  <input
-                    type="text"
-                    value={claimCode}
-                    onChange={e => setClaimCode(e.target.value)}
-                    placeholder="apple river gold"
-                    required
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500 font-mono"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">3-word code printed on your receipt</p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={claimLoading}
-                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-                >
-                  {claimLoading
-                    ? <><Loader className="w-5 h-5 animate-spin" /> Claiming...</>
-                    : <><Gift className="w-5 h-5" /> Claim Points</>}
-                </button>
-              </form>
-
-              {claimError && (
-                <div className="mt-4 flex items-center gap-2 text-red-400 bg-red-900/30 rounded-xl p-4">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <p className="text-sm">{claimError}</p>
-                </div>
-              )}
-
-              {claimSuccess && (
-                <div className="mt-6 bg-green-800/40 border border-green-500/50 rounded-2xl p-6 text-center">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                  <p className="text-green-300 font-bold text-lg mb-1">
-                    +{claimSuccess.points_added} Points Earned!
-                  </p>
-                  <p className="text-gray-300 text-sm">
-                    New balance: <span className="font-bold text-white">{claimSuccess.new_points.toLocaleString()} pts</span>
-                    {' '}· Tier: <span className="font-bold text-yellow-300">{TIER_LABELS[claimSuccess.tier] ?? claimSuccess.tier}</span>
-                  </p>
                 </div>
               )}
             </div>

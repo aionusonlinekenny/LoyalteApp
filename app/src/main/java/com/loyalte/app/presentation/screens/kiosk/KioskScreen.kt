@@ -60,7 +60,7 @@ fun KioskScreen(
             // ── LEFT PANEL — numpad ───────────────────────────────────────────
             Column(
                 modifier = Modifier
-                    .width(320.dp)
+                    .weight(4f)
                     .fillMaxHeight()
                     .padding(start = 24.dp, end = 12.dp, top = 16.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,7 +137,7 @@ fun KioskScreen(
             AnimatedContent(
                 targetState = state,
                 transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(200)) },
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.weight(6f).fillMaxHeight(),
                 label = "right_panel"
             ) { s ->
                 when (s) {

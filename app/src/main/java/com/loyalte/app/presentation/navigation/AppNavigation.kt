@@ -185,9 +185,6 @@ private fun AppNavHost(
                 onCustomerFound = { customerId ->
                     navController.navigate(Screen.CustomerProfile.createRoute(customerId))
                 },
-                onScanQr = {
-                    navController.navigate(Screen.QrScan.route)
-                },
                 onAddCustomer = {
                     navController.navigate(Screen.AddCustomer.route)
                 },
