@@ -8,11 +8,11 @@ $db = get_db();
 // ── POST /api/receipt_codes/claim_payment  (public — claim by Payment ID) ─────
 if ($method === 'POST' && $id === 'claim_payment') {
     $body      = json_body();
-    $phone     = preg_replace('/\D/', '', isset($body['phone'])      ? $body['phone']      : '');
-    $paymentId = strtoupper(trim(       isset($body['payment_id'])   ? $body['payment_id'] : ''));
+    $phone     = preg_replace('/\D/', '', isset($body['phone'])    ? $body['phone']    : '');
+    $paymentId = strtoupper(trim(     isset($body['payment_id'])   ? $body['payment_id'] : ''));
 
-    if (strlen($phone) < 10)  json_error('Số điện thoại không hợp lệ');
-    if (!$paymentId)           json_error('payment_id là bắt buộc');
+    if (strlen($phone) < 10)  json_error('Invalid phone number');
+    if (!$paymentId)           json_error('payment_id is required');
 
     $nowMs   = (int)(microtime(true) * 1000);
     $phone10 = ltrim($phone, '1');
@@ -22,14 +22,28 @@ if ($method === 'POST' && $id === 'claim_payment') {
     $stmt = $db->prepare('SELECT * FROM customers WHERE phone=? OR phone=? OR phone=? LIMIT 1');
     $stmt->execute(array($phone, $phone10, $phone11));
     $customer = $stmt->fetch();
-    if (!$customer) json_error('Số điện thoại chưa đăng ký. Vui lòng đăng ký tại quầy để tích điểm.');
+    $isNewCustomer = false;
+
+    // Auto-register if phone not found
+    if (!$customer) {
+        $row      = $db->query("SELECT MAX(CAST(SUBSTRING(member_id, 5) AS UNSIGNED)) AS mx FROM customers")->fetch();
+        $seq      = (int)($row['mx'] ?? 0) + 1;
+        $memberId = sprintf('LYL-%06d', $seq);
+        $cid      = uuid4();
+        $db->prepare(
+            'INSERT INTO customers (id,member_id,name,phone,email,tier,points,qr_code,created_at,updated_at)
+             VALUES (?,?,?,?,?,\'BRONZE\',0,?,?,?)'
+        )->execute(array($cid, $memberId, 'Member ' . $phone10, $phone10, null, $memberId, $nowMs, $nowMs));
+        $customer      = array('id' => $cid, 'points' => 0);
+        $isNewCustomer = true;
+    }
 
     // Load Clover config
     $cfgRows      = $db->query('SELECT config_key, config_val FROM clover_config')->fetchAll(PDO::FETCH_KEY_PAIR);
     $cfg          = $cfgRows ?: array();
-    $accessToken  = isset($cfg['access_token'])   ? $cfg['access_token']   : '';
-    $mId          = isset($cfg['merchant_id'])     ? $cfg['merchant_id']    : '';
-    $env          = isset($cfg['environment'])     ? $cfg['environment']    : 'sandbox';
+    $accessToken  = isset($cfg['access_token'])      ? $cfg['access_token']      : '';
+    $mId          = isset($cfg['merchant_id'])        ? $cfg['merchant_id']       : '';
+    $env          = isset($cfg['environment'])        ? $cfg['environment']       : 'sandbox';
     $ptsPerDollar = max(1, (int)(isset($cfg['points_per_dollar']) ? $cfg['points_per_dollar'] : 1));
 
     $amountCents = 0;
@@ -47,7 +61,7 @@ if ($method === 'POST' && $id === 'claim_payment') {
         // Already claimed → abort
         if ($logRow && (int)$logRow['points_awarded'] > 0 && $logRow['customer_id'] !== null) {
             $db->rollBack();
-            json_error('Receipt này đã được dùng để nhận điểm rồi.');
+            json_error('This receipt has already been used to earn points.');
         }
 
         // Resolve canonical payment_id (log may store real payment_id even if we searched by order_id)
@@ -61,7 +75,7 @@ if ($method === 'POST' && $id === 'claim_payment') {
             // Fetch from Clover API
             if (!$accessToken || !$mId) {
                 $db->rollBack();
-                json_error('Hệ thống chưa kết nối Clover. Vui lòng liên hệ nhân viên.');
+                json_error('Clover is not configured. Please contact staff.');
             }
             $base    = ($env === 'production') ? 'https://api.clover.com' : 'https://apisandbox.dev.clover.com';
             $headers = array('Authorization: Bearer ' . $accessToken, 'Accept: application/json');
@@ -99,28 +113,28 @@ if ($method === 'POST' && $id === 'claim_payment') {
 
                 if ($amountCents <= 0) {
                     $db->rollBack();
-                    json_error('Không tìm thấy thông tin thanh toán. Vui lòng liên hệ nhân viên.');
+                    json_error('Payment not found. Please contact staff.');
                 }
             }
         }
 
         if ($amountCents <= 0) {
             $db->rollBack();
-            json_error('Thanh toán có giá trị $0 hoặc không hợp lệ.');
+            json_error('Payment amount is $0 or invalid.');
         }
 
-        $pts    = intdiv($amountCents, 100) * $ptsPerDollar;
+        $pts = intdiv($amountCents, 100) * $ptsPerDollar;
         if ($pts <= 0) {
             $db->rollBack();
-            json_error('Giá trị thanh toán quá nhỏ để nhận điểm (tối thiểu $1).');
+            json_error('Payment amount is too small to earn points (minimum $1).');
         }
 
         // Lock customer row and award points
         $lockStmt = $db->prepare('SELECT points FROM customers WHERE id=? FOR UPDATE');
         $lockStmt->execute(array($customer['id']));
-        $locked   = $lockStmt->fetch();
-        $newPts   = (int)$locked['points'] + $pts;
-        $tier     = tier_from_points($newPts);
+        $locked = $lockStmt->fetch();
+        $newPts = (int)$locked['points'] + $pts;
+        $tier   = tier_from_points($newPts);
 
         $db->prepare('UPDATE customers SET points=?,tier=?,updated_at=? WHERE id=?')
            ->execute(array($newPts, $tier, $nowMs, $customer['id']));
@@ -144,7 +158,7 @@ if ($method === 'POST' && $id === 'claim_payment') {
                  VALUES (?,?,?,?,?,?,?,'processed','Website receipt claim',?)"
             )->execute(array(
                 $resolvedPaymentId, $merchantId,
-                ($resolvedPaymentId !== $paymentId) ? $paymentId : null,  // store original scan as order_id if different
+                ($resolvedPaymentId !== $paymentId) ? $paymentId : null,
                 $customer['id'], $phone, $amountCents, $pts, $nowMs
             ));
         }
@@ -152,14 +166,15 @@ if ($method === 'POST' && $id === 'claim_payment') {
         $db->commit();
     } catch (Exception $e) {
         $db->rollBack();
-        json_error('Không thể cộng điểm. Vui lòng thử lại.', 500);
+        json_error('Could not add points. Please try again.', 500);
     }
 
     json_success(array(
-        'points_added' => $pts,
-        'new_points'   => $newPts,
-        'tier'         => $tier,
-        'amount'       => number_format($amountCents / 100, 2),
+        'points_added'   => $pts,
+        'new_points'     => $newPts,
+        'tier'           => $tier,
+        'amount'         => number_format($amountCents / 100, 2),
+        'is_new_member'  => $isNewCustomer,
     ));
 }
 
@@ -181,15 +196,15 @@ if ($method === 'POST' && $id === 'claim') {
         $stmt->execute([$code]);
         $rc = $stmt->fetch();
 
-        if (!$rc)                       { $db->rollBack(); json_error('Mã không tồn tại', 404); }
-        if ($rc['claimed_by'] !== null) { $db->rollBack(); json_error('Mã này đã được sử dụng'); }
-        if ($rc['expires_at'] < $nowMs) { $db->rollBack(); json_error('Mã đã hết hạn'); }
+        if (!$rc)                       { $db->rollBack(); json_error('Code not found', 404); }
+        if ($rc['claimed_by'] !== null) { $db->rollBack(); json_error('This code has already been used'); }
+        if ($rc['expires_at'] < $nowMs) { $db->rollBack(); json_error('This code has expired'); }
 
         // Verify customer exists
         $stmtC = $db->prepare('SELECT points FROM customers WHERE id = ? FOR UPDATE');
         $stmtC->execute([$customerId]);
         $customer = $stmtC->fetch();
-        if (!$customer) { $db->rollBack(); json_error('Khách hàng không tồn tại', 404); }
+        if (!$customer) { $db->rollBack(); json_error('Customer not found', 404); }
 
         $pts       = (int)$rc['points'];
         $newPoints = $customer['points'] + $pts;
@@ -212,7 +227,7 @@ if ($method === 'POST' && $id === 'claim') {
         $db->commit();
     } catch (Exception $e) {
         $db->rollBack();
-        json_error('Lỗi hệ thống: ' . $e->getMessage(), 500);
+        json_error('System error: ' . $e->getMessage(), 500);
     }
 
     json_success(['points_added' => $pts, 'new_points' => $newPoints, 'tier' => $tier]);

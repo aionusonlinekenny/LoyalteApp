@@ -163,7 +163,7 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
   const [payPhone, setPayPhone]       = useState('');
   const [paymentId, setPaymentId]     = useState('');
   const [payLoading, setPayLoading]   = useState(false);
-  const [paySuccess, setPaySuccess]   = useState<{ points_added: number; new_points: number; tier: string; amount: string } | null>(null);
+  const [paySuccess, setPaySuccess]   = useState<{ points_added: number; new_points: number; tier: string; amount: string; is_new_member?: boolean } | null>(null);
   const [payError, setPayError]       = useState('');
 
   const handleScanDetected = useCallback((value: string) => {
@@ -414,6 +414,11 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
               {paySuccess && (
                 <div className="mt-6 bg-green-800/40 border border-green-500/50 rounded-2xl p-6 text-center">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                  {paySuccess.is_new_member && (
+                    <p className="text-blue-300 text-sm font-semibold mb-2">
+                      🎉 Welcome! Your loyalty account has been created.
+                    </p>
+                  )}
                   <p className="text-green-300 font-bold text-lg mb-1">
                     +{paySuccess.points_added} Points Earned!
                   </p>
@@ -424,6 +429,11 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
                     New balance: <span className="font-bold text-white">{paySuccess.new_points.toLocaleString()} pts</span>
                     {' '}· Tier: <span className="font-bold text-yellow-300">{TIER_LABELS[paySuccess.tier] ?? paySuccess.tier}</span>
                   </p>
+                  {paySuccess.is_new_member && (
+                    <p className="text-gray-500 text-xs mt-3">
+                      Ask staff to update your name on your account.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

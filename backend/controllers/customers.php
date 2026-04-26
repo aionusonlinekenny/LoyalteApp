@@ -82,10 +82,18 @@ if ($method === 'GET' && $id === null) {
 if ($method === 'POST' && $id === null) {
     $body  = json_body();
     $name  = trim($body['name']  ?? '');
-    $phone = trim($body['phone'] ?? '');
+    $phone = preg_replace('/\D/', '', trim($body['phone'] ?? ''));   // strip +, spaces, dashes
     $email = trim($body['email'] ?? '') ?: null;
 
-    if (!$name || !$phone) json_error('Name and phone are required');
+    if (!$name)  json_error('Name is required');
+    if (!$phone) json_error('Phone is required');
+
+    // Duplicate check (try 10-digit and 11-digit variants)
+    $local = ltrim($phone, '1');
+    $long  = '1' . $local;
+    $dup = $db->prepare('SELECT id FROM customers WHERE phone=? OR phone=? OR phone=? LIMIT 1');
+    $dup->execute([$phone, $local, $long]);
+    if ($dup->fetch()) json_error('Phone number already registered', 409);
 
     // Next member_id
     $row      = $db->query("SELECT MAX(CAST(SUBSTRING(member_id, 5) AS UNSIGNED)) AS mx FROM customers")->fetch();
