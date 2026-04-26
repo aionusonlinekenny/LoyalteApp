@@ -5,22 +5,29 @@
 
 $db = get_db();
 
+// 10-digit US phone normalization (strip country code)
+if (!function_exists('phone10')) {
+    function phone10($raw) {
+        $d = preg_replace('/\D/', '', $raw);
+        if (strlen($d) === 11 && $d[0] === '1') $d = substr($d, 1);
+        return $d;
+    }
+}
+
 // ── POST /api/receipt_codes/claim_payment  (public — claim by Payment ID) ─────
 if ($method === 'POST' && $id === 'claim_payment') {
     $body      = json_body();
-    $phone     = preg_replace('/\D/', '', isset($body['phone'])    ? $body['phone']    : '');
-    $paymentId = strtoupper(trim(     isset($body['payment_id'])   ? $body['payment_id'] : ''));
+    $phone10   = phone10(isset($body['phone']) ? $body['phone'] : '');
+    $paymentId = strtoupper(trim(isset($body['payment_id']) ? $body['payment_id'] : ''));
 
-    if (strlen($phone) < 10)  json_error('Invalid phone number');
-    if (!$paymentId)           json_error('payment_id is required');
+    if (strlen($phone10) < 10) json_error('Invalid phone number');
+    if (!$paymentId)            json_error('payment_id is required');
 
-    $nowMs   = (int)(microtime(true) * 1000);
-    $phone10 = ltrim($phone, '1');
-    $phone11 = '1' . $phone10;
+    $nowMs = (int)(microtime(true) * 1000);
 
-    // Find customer by phone (try all 3 variants)
-    $stmt = $db->prepare('SELECT * FROM customers WHERE phone=? OR phone=? OR phone=? LIMIT 1');
-    $stmt->execute(array($phone, $phone10, $phone11));
+    // Find customer by 10-digit phone
+    $stmt = $db->prepare('SELECT * FROM customers WHERE phone=? LIMIT 1');
+    $stmt->execute(array($phone10));
     $customer = $stmt->fetch();
     $isNewCustomer = false;
 
@@ -150,7 +157,7 @@ if ($method === 'POST' && $id === 'claim_payment') {
                 "UPDATE clover_payment_logs
                  SET customer_id=?,phone=?,amount_cents=?,points_awarded=?,status='processed',note='Website receipt claim'
                  WHERE payment_id=?"
-            )->execute(array($customer['id'], $phone, $amountCents, $pts, $logRow['payment_id']));
+            )->execute(array($customer['id'], $phone10, $amountCents, $pts, $logRow['payment_id']));
         } else {
             $db->prepare(
                 "INSERT INTO clover_payment_logs
@@ -159,7 +166,7 @@ if ($method === 'POST' && $id === 'claim_payment') {
             )->execute(array(
                 $resolvedPaymentId, $merchantId,
                 ($resolvedPaymentId !== $paymentId) ? $paymentId : null,
-                $customer['id'], $phone, $amountCents, $pts, $nowMs
+                $customer['id'], $phone10, $amountCents, $pts, $nowMs
             ));
         }
 

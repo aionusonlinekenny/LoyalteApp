@@ -55,11 +55,13 @@ class AddCustomerViewModel @Inject constructor(
             return
         }
 
-        // Normalize: 10-digit → +1XXXXXXXXXX
-        val normalized = when {
-            phone.startsWith("+") -> phone
-            phone.length == 10    -> "+1$phone"
-            else                  -> phone
+        // Normalize: always store as 10-digit (strip country code)
+        val digits = phone.filter { it.isDigit() }
+        val normalized = if (digits.length == 11 && digits.startsWith("1")) digits.drop(1) else digits
+
+        if (normalized.length != 10) {
+            _uiState.update { it.copy(errorMessage = "Enter a valid 10-digit phone number") }
+            return
         }
 
         viewModelScope.launch {

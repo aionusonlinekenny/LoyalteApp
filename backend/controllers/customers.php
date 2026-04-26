@@ -5,15 +5,23 @@
 // GET    /api/customers/{id}          get one (staff)
 // POST   /api/customers               create (staff)
 // POST   /api/customers/lookup        phone lookup — public, returns limited info
+// PUT    /api/customers/{id}          update info (staff)
 // PUT    /api/customers/{id}/points   add/adjust points (staff)
 // DELETE /api/customers/{id}          delete customer (staff)
+
+// Always store/compare as 10-digit US number (strip +1 country code)
+function phone10($raw) {
+    $d = preg_replace('/\D/', '', $raw);
+    if (strlen($d) === 11 && $d[0] === '1') $d = substr($d, 1);
+    return $d;
+}
 
 // ── POST /api/customers/lookup (public, no auth) ──────────────────────────────
 if ($method === 'POST' && $id === 'lookup') {
     $db       = get_db();
     $body     = json_body();
-    $phone    = trim($body['phone']     ?? '');
-    $memberId = trim($body['member_id'] ?? '');
+    $phone    = phone10($body['phone']     ?? '');
+    $memberId = trim($body['member_id']    ?? '');
 
     if (!$phone && !$memberId) json_error('phone or member_id is required');
 
@@ -49,18 +57,13 @@ if ($method === 'GET' && $id !== null && $sub === null) {
 
 // ── GET list / search ─────────────────────────────────────────────────────────
 if ($method === 'GET' && $id === null) {
-    $phone = $_GET['phone'] ?? null;
-    $qr    = $_GET['qr']    ?? null;
+    $phone = isset($_GET['phone']) ? $_GET['phone'] : null;
+    $qr    = isset($_GET['qr'])    ? $_GET['qr']    : null;
 
     if ($phone) {
-        // Normalize: strip non-digits, try 10-digit and 11-digit variants
-        $digits = preg_replace('/\D/', '', $phone);
-        $local  = ltrim($digits, '1');   // 10-digit without country code
-        $long   = '1' . $local;          // 11-digit with country code
-        $stmt = $db->prepare(
-            'SELECT * FROM customers WHERE phone = ? OR phone = ? OR phone = ? LIMIT 1'
-        );
-        $stmt->execute([$digits, $local, $long]);
+        $p10  = phone10($phone);
+        $stmt = $db->prepare('SELECT * FROM customers WHERE phone = ? LIMIT 1');
+        $stmt->execute([$p10]);
         $c = $stmt->fetch();
         if (!$c) json_error('Customer not found', 404);
         json_success(['customer' => $c]);
@@ -82,17 +85,15 @@ if ($method === 'GET' && $id === null) {
 if ($method === 'POST' && $id === null) {
     $body  = json_body();
     $name  = trim($body['name']  ?? '');
-    $phone = preg_replace('/\D/', '', trim($body['phone'] ?? ''));   // strip +, spaces, dashes
+    $phone = phone10($body['phone'] ?? '');
     $email = trim($body['email'] ?? '') ?: null;
 
-    if (!$name)  json_error('Name is required');
-    if (!$phone) json_error('Phone is required');
+    if (!$name)              json_error('Name is required');
+    if (strlen($phone) < 10) json_error('Invalid phone number');
 
-    // Duplicate check (try 10-digit and 11-digit variants)
-    $local = ltrim($phone, '1');
-    $long  = '1' . $local;
-    $dup = $db->prepare('SELECT id FROM customers WHERE phone=? OR phone=? OR phone=? LIMIT 1');
-    $dup->execute([$phone, $local, $long]);
+    // Duplicate check
+    $dup = $db->prepare('SELECT id FROM customers WHERE phone = ? LIMIT 1');
+    $dup->execute([$phone]);
     if ($dup->fetch()) json_error('Phone number already registered', 409);
 
     // Next member_id
@@ -126,11 +127,11 @@ if ($method === 'DELETE' && $id !== null) {
 if ($method === 'PUT' && $id !== null && $sub === null) {
     $body  = json_body();
     $name  = trim($body['name']  ?? '');
-    $phone = preg_replace('/\D/', '', trim($body['phone'] ?? ''));
+    $phone = phone10($body['phone'] ?? '');
     $email = isset($body['email']) ? (trim($body['email']) ?: null) : null;
 
-    if (!$name)  json_error('Name is required');
-    if (!$phone) json_error('Phone is required');
+    if (!$name)              json_error('Name is required');
+    if (strlen($phone) < 10) json_error('Invalid phone number');
 
     // Verify customer exists
     $stmt = $db->prepare('SELECT id FROM customers WHERE id = ?');
@@ -138,10 +139,8 @@ if ($method === 'PUT' && $id !== null && $sub === null) {
     if (!$stmt->fetch()) json_error('Customer not found', 404);
 
     // Check phone uniqueness (excluding this customer)
-    $local = ltrim($phone, '1');
-    $long  = '1' . $local;
-    $dup = $db->prepare('SELECT id FROM customers WHERE (phone=? OR phone=? OR phone=?) AND id != ? LIMIT 1');
-    $dup->execute([$phone, $local, $long, $id]);
+    $dup = $db->prepare('SELECT id FROM customers WHERE phone = ? AND id != ? LIMIT 1');
+    $dup->execute([$phone, $id]);
     if ($dup->fetch()) json_error('Phone number already registered to another customer');
 
     $nowMs = (int)(microtime(true) * 1000);
