@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.loyalte.app.domain.model.Customer
 import com.loyalte.app.domain.model.CustomerTier
 import com.loyalte.app.presentation.components.ErrorMessage
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,12 @@ fun CustomerListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var confirmDeleteTarget by remember { mutableStateOf<Customer?>(null) }
+
+    // Reload every time this screen enters the foreground (covers drawer nav reuse)
+    LifecycleResumeEffect(Unit) {
+        viewModel.loadCustomers()
+        onPauseOrDispose { /* nothing */ }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->

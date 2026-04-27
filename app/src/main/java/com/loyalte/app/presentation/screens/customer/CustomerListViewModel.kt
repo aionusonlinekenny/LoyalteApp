@@ -43,10 +43,6 @@ class CustomerListViewModel @Inject constructor(
     private val _events = Channel<Event>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    init {
-        loadCustomers()
-    }
-
     fun loadCustomers() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
