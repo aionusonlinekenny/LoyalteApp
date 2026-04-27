@@ -99,6 +99,7 @@ data class RewardDto(
     @SerializedName("points_required") val pointsRequired: Int,
     @SerializedName("is_active")       val isActive: Int,
     val category: String,
+    @SerializedName("image_url")       val imageUrl: String?,
     @SerializedName("created_at")      val createdAt: Long
 )
 

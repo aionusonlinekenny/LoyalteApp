@@ -1,6 +1,10 @@
 package com.loyalte.app.presentation.screens.rewards
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,13 +19,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.loyalte.app.data.remote.api.dto.RewardDto
 
 private val CATEGORIES = listOf("FOOD", "DRINK", "DISCOUNT", "OTHER")
@@ -39,6 +46,12 @@ fun ManageRewardsScreen(
     viewModel: ManageRewardsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        viewModel.setPendingImage(uri)
+    }
 
     Scaffold(
         topBar = {
@@ -130,6 +143,8 @@ fun ManageRewardsScreen(
         RewardFormDialog(
             editing = uiState.editingReward,
             isSaving = uiState.isSaving,
+            pendingImageUri = uiState.pendingImageUri,
+            onPickImage = { imagePicker.launch("image/*") },
             onDismiss = viewModel::dismissDialog,
             onSave = { name, desc, pts, cat, active ->
                 viewModel.saveReward(name, desc, pts, cat, active)
@@ -180,17 +195,28 @@ private fun RewardCard(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Category badge
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        color = categoryColor(reward.category).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(categoryEmoji(reward.category), fontSize = 20.sp)
+            // Image or category badge
+            if (!reward.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = reward.imageUrl,
+                    contentDescription = reward.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            color = categoryColor(reward.category).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(categoryEmoji(reward.category), fontSize = 20.sp)
+                }
             }
 
             Spacer(Modifier.width(12.dp))
@@ -278,6 +304,8 @@ private fun RewardCard(
 private fun RewardFormDialog(
     editing: RewardDto?,
     isSaving: Boolean,
+    pendingImageUri: Uri?,
+    onPickImage: () -> Unit,
     onDismiss: () -> Unit,
     onSave: (name: String, description: String, pointsRequired: Int, category: String, isActive: Boolean) -> Unit
 ) {
@@ -290,11 +318,49 @@ private fun RewardFormDialog(
     var nameError by remember { mutableStateOf(false) }
     var pointsError by remember { mutableStateOf(false) }
 
+    // Determine what image to show: pending local URI takes priority, then existing URL
+    val previewModel: Any? = pendingImageUri ?: editing?.imageUrl?.takeIf { it.isNotBlank() }
+
     AlertDialog(
         onDismissRequest = { if (!isSaving) onDismiss() },
         title = { Text(if (editing != null) "Edit Reward" else "New Reward", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                // Image preview / picker
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (previewModel != null) {
+                        AsyncImage(
+                            model = previewModel,
+                            contentDescription = "Reward image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("No image", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = onPickImage,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (previewModel != null) "Change Image" else "Pick Image from Device")
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; nameError = false },

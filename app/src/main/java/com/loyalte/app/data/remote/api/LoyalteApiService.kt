@@ -1,6 +1,7 @@
 package com.loyalte.app.data.remote.api
 
 import com.loyalte.app.data.remote.api.dto.*
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -95,6 +96,13 @@ interface LoyalteApiService {
     suspend fun deleteReward(
         @Path("id") id: String
     ): Response<SimpleResponse>
+
+    @Multipart
+    @POST("rewards/{id}/image")
+    suspend fun uploadRewardImage(
+        @Path("id") id: String,
+        @Part image: MultipartBody.Part
+    ): Response<RewardResponse>
 
     // ── Redemptions ───────────────────────────────────────────────────────────
 

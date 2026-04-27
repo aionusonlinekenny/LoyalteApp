@@ -113,6 +113,9 @@ dependencies {
     // DataStore (token persistence, replaces Firebase Auth)
     implementation(libs.datastore.preferences)
 
+    // Image loading
+    implementation(libs.coil.compose)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
