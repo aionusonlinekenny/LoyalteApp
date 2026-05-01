@@ -134,12 +134,20 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
   const [checkLoading, setCheckLoading] = useState(false);
   const [checkResult, setCheckResult] = useState<CustomerInfo | null>(null);
   const [checkError, setCheckError] = useState('');
+  const [checkPinOpen, setCheckPinOpen] = useState(false);
+  const [checkPinValue, setCheckPinValue] = useState('');
+  const [checkPinConfirm, setCheckPinConfirm] = useState('');
 
   const handleCheckPoints = async (e: React.FormEvent) => {
     e.preventDefault();
     setCheckLoading(true);
     setCheckError('');
     setCheckResult(null);
+    setCheckPinOpen(false);
+    setCheckPinValue('');
+    setCheckPinConfirm('');
+    setPinDone(false);
+    setPinError('');
     try {
       const res = await fetch(`${API}/customers/lookup`, {
         method: 'POST',
@@ -159,12 +167,39 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
     }
   };
 
+  // ── Shared PIN helpers ────────────────────────────────────────────────────
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError]     = useState('');
+  const [pinDone, setPinDone]       = useState(false);
+
+  const handleSetPin = async (phone: string, pin: string, confirm: string) => {
+    if (!/^\d{4}$/.test(pin))   { setPinError('PIN must be 4 digits'); return; }
+    if (pin !== confirm)         { setPinError('PINs do not match'); return; }
+    setPinLoading(true); setPinError('');
+    try {
+      const res = await fetch(`${API}/customers/set_pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, pin }),
+      });
+      const data = await res.json();
+      if (data.success) { setPinDone(true); }
+      else { setPinError(data.message || 'Failed to set PIN'); }
+    } catch {
+      setPinError('Connection error. Please try again.');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
   // ── Claim by Payment ID tab ───────────────────────────────────────────────
   const [payPhone, setPayPhone]       = useState('');
   const [paymentId, setPaymentId]     = useState('');
   const [payLoading, setPayLoading]   = useState(false);
   const [paySuccess, setPaySuccess]   = useState<{ points_added: number; new_points: number; tier: string; amount: string; is_new_member?: boolean } | null>(null);
   const [payError, setPayError]       = useState('');
+  const [payPinValue, setPayPinValue] = useState('');
+  const [payPinConfirm, setPayPinConfirm] = useState('');
 
   const handleScanDetected = useCallback((value: string) => {
     setPaymentId(value);
@@ -177,6 +212,10 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
     setPayLoading(true);
     setPayError('');
     setPaySuccess(null);
+    setPayPinValue('');
+    setPayPinConfirm('');
+    setPinDone(false);
+    setPinError('');
 
     try {
       const res = await fetch(`${API}/receipt_codes/claim_payment`, {
@@ -307,25 +346,70 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
               )}
 
               {checkResult && (
-                <div className={`mt-6 bg-gradient-to-br ${TIER_COLORS[checkResult.tier] ?? TIER_COLORS.BRONZE} rounded-2xl p-6 text-white shadow-xl`}>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Award className="w-8 h-8" />
-                    <div>
-                      <p className="font-bold text-lg">{checkResult.name}</p>
-                      <p className="text-sm opacity-80">{checkResult.member_id}</p>
+                <>
+                  <div className={`mt-6 bg-gradient-to-br ${TIER_COLORS[checkResult.tier] ?? TIER_COLORS.BRONZE} rounded-2xl p-6 text-white shadow-xl`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Award className="w-8 h-8" />
+                      <div>
+                        <p className="font-bold text-lg">{checkResult.name}</p>
+                        <p className="text-sm opacity-80">{checkResult.member_id}</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-sm opacity-80 mb-1">Current Tier</p>
+                        <p className="text-xl font-bold">{TIER_LABELS[checkResult.tier] ?? checkResult.tier}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm opacity-80 mb-1">Total Points</p>
+                        <p className="text-3xl font-black">{checkResult.points.toLocaleString()}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-sm opacity-80 mb-1">Current Tier</p>
-                      <p className="text-xl font-bold">{TIER_LABELS[checkResult.tier] ?? checkResult.tier}</p>
+
+                  {/* PIN setup / change for existing members */}
+                  {!pinDone ? (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => { setCheckPinOpen(o => !o); setPinError(''); setCheckPinValue(''); setCheckPinConfirm(''); }}
+                        className="w-full text-sm text-gray-400 hover:text-gray-200 py-2 transition-colors flex items-center justify-center gap-2"
+                      >
+                        🔐 {checkPinOpen ? 'Hide' : 'Set or change my kiosk PIN'}
+                      </button>
+                      {checkPinOpen && (
+                        <div className="mt-2 bg-gray-700/60 border border-gray-600 rounded-xl p-4 space-y-3">
+                          <p className="text-xs text-gray-400 text-center">Set a 4-digit PIN to confirm reward redemptions at the kiosk.</p>
+                          <input
+                            type="password" inputMode="numeric" maxLength={4}
+                            value={checkPinValue}
+                            onChange={e => { setCheckPinValue(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                            placeholder="New 4-digit PIN"
+                            className="w-full text-center tracking-[0.4em] text-xl py-3 bg-gray-800 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 placeholder-gray-600"
+                          />
+                          <input
+                            type="password" inputMode="numeric" maxLength={4}
+                            value={checkPinConfirm}
+                            onChange={e => { setCheckPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                            placeholder="Confirm PIN"
+                            className="w-full text-center tracking-[0.4em] text-xl py-3 bg-gray-800 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 placeholder-gray-600"
+                          />
+                          {pinError && <p className="text-red-400 text-xs text-center">{pinError}</p>}
+                          <button
+                            onClick={() => handleSetPin(checkPhone, checkPinValue, checkPinConfirm)}
+                            disabled={pinLoading || checkPinValue.length < 4 || checkPinConfirm.length < 4}
+                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                          >
+                            {pinLoading ? <><Loader className="w-4 h-4 animate-spin" /> Saving...</> : 'Save PIN'}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm opacity-80 mb-1">Total Points</p>
-                      <p className="text-3xl font-black">{checkResult.points.toLocaleString()}</p>
+                  ) : (
+                    <div className="mt-3 flex items-center justify-center gap-2 text-green-400 text-sm">
+                      <CheckCircle className="w-4 h-4" /> PIN saved successfully!
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -412,29 +496,63 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
               )}
 
               {paySuccess && (
-                <div className="mt-6 bg-green-800/40 border border-green-500/50 rounded-2xl p-6 text-center">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                  {paySuccess.is_new_member && (
-                    <p className="text-blue-300 text-sm font-semibold mb-2">
-                      🎉 Welcome! Your loyalty account has been created.
+                <>
+                  <div className="mt-6 bg-green-800/40 border border-green-500/50 rounded-2xl p-6 text-center">
+                    <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                    {paySuccess.is_new_member && (
+                      <p className="text-blue-300 text-sm font-semibold mb-2">
+                        🎉 Welcome! Your loyalty account has been created.
+                      </p>
+                    )}
+                    <p className="text-green-300 font-bold text-lg mb-1">
+                      +{paySuccess.points_added} Points Earned!
                     </p>
-                  )}
-                  <p className="text-green-300 font-bold text-lg mb-1">
-                    +{paySuccess.points_added} Points Earned!
-                  </p>
-                  <p className="text-gray-400 text-sm mb-2">
-                    Payment amount: <span className="text-white font-semibold">${paySuccess.amount}</span>
-                  </p>
-                  <p className="text-gray-300 text-sm">
-                    New balance: <span className="font-bold text-white">{paySuccess.new_points.toLocaleString()} pts</span>
-                    {' '}· Tier: <span className="font-bold text-yellow-300">{TIER_LABELS[paySuccess.tier] ?? paySuccess.tier}</span>
-                  </p>
-                  {paySuccess.is_new_member && (
-                    <p className="text-gray-500 text-xs mt-3">
-                      Ask staff to update your name on your account.
+                    <p className="text-gray-400 text-sm mb-2">
+                      Payment amount: <span className="text-white font-semibold">${paySuccess.amount}</span>
                     </p>
+                    <p className="text-gray-300 text-sm">
+                      New balance: <span className="font-bold text-white">{paySuccess.new_points.toLocaleString()} pts</span>
+                      {' '}· Tier: <span className="font-bold text-yellow-300">{TIER_LABELS[paySuccess.tier] ?? paySuccess.tier}</span>
+                    </p>
+                  </div>
+
+                  {/* PIN setup — shown for new members; always available */}
+                  {!pinDone ? (
+                    <div className="mt-4 bg-blue-900/30 border border-blue-500/40 rounded-2xl p-5">
+                      <p className="text-blue-300 font-semibold text-sm text-center mb-3">
+                        🔐 {paySuccess.is_new_member ? 'Set a PIN to redeem rewards at the kiosk' : 'Update your kiosk PIN'}
+                      </p>
+                      <div className="space-y-3">
+                        <input
+                          type="password" inputMode="numeric" maxLength={4}
+                          value={payPinValue}
+                          onChange={e => { setPayPinValue(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                          placeholder="Enter 4-digit PIN"
+                          className="w-full text-center tracking-[0.4em] text-2xl py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                        />
+                        <input
+                          type="password" inputMode="numeric" maxLength={4}
+                          value={payPinConfirm}
+                          onChange={e => { setPayPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                          placeholder="Confirm PIN"
+                          className="w-full text-center tracking-[0.4em] text-2xl py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                        />
+                        {pinError && <p className="text-red-400 text-xs text-center">{pinError}</p>}
+                        <button
+                          onClick={() => handleSetPin(payPhone, payPinValue, payPinConfirm)}
+                          disabled={pinLoading || payPinValue.length < 4 || payPinConfirm.length < 4}
+                          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                        >
+                          {pinLoading ? <><Loader className="w-5 h-5 animate-spin" /> Saving PIN...</> : 'Set My PIN'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-center justify-center gap-2 text-green-400 text-sm">
+                      <CheckCircle className="w-4 h-4" /> PIN saved! Use it at the kiosk to redeem rewards.
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
           )}

@@ -58,6 +58,9 @@ fun KioskScreen(
 
         Row(Modifier.fillMaxSize()) {
             // ── LEFT PANEL — numpad ───────────────────────────────────────────
+            val isPinEntry = state is KioskState.PinEntry
+            val pinState   = state as? KioskState.PinEntry
+
             Column(
                 modifier = Modifier
                     .weight(4f)
@@ -75,55 +78,108 @@ fun KioskScreen(
                 )
                 Spacer(Modifier.height(16.dp))
 
-                val isIdle = state is KioskState.Idle || state is KioskState.Error
-                val displayPhone = formatPhone(phone)
-
-                Text(
-                    text = if (displayPhone.isEmpty()) "( _ _ _ )  _ _ _ - _ _ _ _"
-                           else displayPhone,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (displayPhone.isEmpty()) Color(0x55FFFFFF) else White,
-                    letterSpacing = 1.sp
-                )
-                Spacer(Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { phone.length / 10f },
-                    modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-                    color = Gold,
-                    trackColor = Color(0x33FFFFFF)
-                )
-
-                if (state is KioskState.Error) {
-                    Spacer(Modifier.height(4.dp))
+                if (isPinEntry && pinState != null) {
+                    // ── PIN entry mode ────────────────────────────────────────
                     Text(
-                        (state as KioskState.Error).message,
-                        color = Color(0xFFFF6B6B),
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center
+                        "🔐 Enter PIN",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = WhiteDim
                     )
-                }
+                    Spacer(Modifier.height(12.dp))
 
-                Spacer(Modifier.height(14.dp))
-                Numpad(
-                    enabled = isIdle,
-                    onDigit = viewModel::appendDigit,
-                    onBackspace = viewModel::backspace
-                )
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = viewModel::claim,
-                    enabled = phone.length == 10 && isIdle,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Gold,
-                        disabledContainerColor = Color(0x33FFFFFF),
-                        contentColor = Color(0xFF1A0A3C),
-                        disabledContentColor = WhiteDim
+                    // 4 PIN dot indicators
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        repeat(4) { i ->
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(
+                                        color = if (i < pinState.pinDigits.length) Gold else Color(0x44FFFFFF),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
+
+                    if (pinState.error != null) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            pinState.error,
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    Numpad(
+                        enabled = true,
+                        onDigit = viewModel::pinAppendDigit,
+                        onBackspace = viewModel::pinBackspace
                     )
-                ) {
-                    Text("EARN POINTS", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = viewModel::cancelPin,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = WhiteDim),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x55FFFFFF))
+                    ) {
+                        Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    // ── Phone entry mode ──────────────────────────────────────
+                    val isIdle = state is KioskState.Idle || state is KioskState.Error
+                    val displayPhone = formatPhone(phone)
+
+                    Text(
+                        text = if (displayPhone.isEmpty()) "( _ _ _ )  _ _ _ - _ _ _ _"
+                               else displayPhone,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (displayPhone.isEmpty()) Color(0x55FFFFFF) else White,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { phone.length / 10f },
+                        modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+                        color = Gold,
+                        trackColor = Color(0x33FFFFFF)
+                    )
+
+                    if (state is KioskState.Error) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            (state as KioskState.Error).message,
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    Numpad(
+                        enabled = isIdle,
+                        onDigit = viewModel::appendDigit,
+                        onBackspace = viewModel::backspace
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = viewModel::claim,
+                        enabled = phone.length == 10 && isIdle,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Gold,
+                            disabledContainerColor = Color(0x33FFFFFF),
+                            contentColor = Color(0xFF1A0A3C),
+                            disabledContentColor = WhiteDim
+                        )
+                    ) {
+                        Text("EARN POINTS", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+                    }
                 }
             }
 
@@ -144,7 +200,8 @@ fun KioskScreen(
                     is KioskState.Idle, is KioskState.Error -> WelcomePanel()
                     is KioskState.Claiming                   -> BusyPanel("Checking your account...")
                     is KioskState.Redeeming                  -> BusyPanel("Redeeming your reward...")
-                    is KioskState.CustomerLoaded             -> CustomerPanel(s, viewModel::redeem, viewModel::reset)
+                    is KioskState.CustomerLoaded             -> CustomerPanel(s, viewModel::requestRedeem, viewModel::reset)
+                    is KioskState.PinEntry                   -> PinConfirmPanel(s)
                     is KioskState.RedeemSuccess              -> RedeemSuccessPanel(s)
                 }
             }
@@ -227,6 +284,57 @@ private fun BusyPanel(message: String) {
         CircularProgressIndicator(color = Gold, modifier = Modifier.size(52.dp), strokeWidth = 4.dp)
         Spacer(Modifier.height(20.dp))
         Text(message, color = WhiteDim, fontSize = 16.sp)
+    }
+}
+
+@Composable
+private fun PinConfirmPanel(state: KioskState.PinEntry) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("🔐", fontSize = 52.sp)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Confirm Redemption",
+            fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Gold
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            state.targetRewardName,
+            fontSize = 18.sp, color = White, textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(20.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = PanelBg)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        state.customer.customerName,
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = White,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                    Text(state.customer.memberId, fontSize = 12.sp, color = WhiteDim)
+                }
+                Text(
+                    "${state.customer.totalPoints} pts",
+                    fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Gold
+                )
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(
+            "Enter your 4-digit PIN\non the left to confirm",
+            fontSize = 15.sp, color = WhiteDim, textAlign = TextAlign.Center, lineHeight = 22.sp
+        )
     }
 }
 

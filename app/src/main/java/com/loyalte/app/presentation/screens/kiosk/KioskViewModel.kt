@@ -32,9 +32,17 @@ class KioskViewModel @Inject constructor(
             val pointsEarned: Int,
             val paymentAmount: String?,
             val rewards: List<RewardDto>,
-            val phone: String
+            val phone: String,
+            val hasPIN: Boolean
         ) : KioskState()
         object Redeeming : KioskState()
+        data class PinEntry(
+            val customer: CustomerLoaded,
+            val targetRewardId: String,
+            val targetRewardName: String,
+            val pinDigits: String = "",
+            val error: String? = null
+        ) : KioskState()
         data class RedeemSuccess(
             val customerName: String,
             val rewardName: String,
@@ -100,7 +108,8 @@ class KioskViewModel @Inject constructor(
                         pointsEarned  = body.pointsEarned ?: 0,
                         paymentAmount = if (body.status == "ok") body.amount else null,
                         rewards       = body.rewards ?: emptyList(),
-                        phone         = phone
+                        phone         = phone,
+                        hasPIN        = body.customer?.hasPin ?: false
                     )
                     lastCustomerLoaded = loaded
                     _state.value = loaded
@@ -118,35 +127,71 @@ class KioskViewModel @Inject constructor(
         }
     }
 
-    fun redeem(rewardId: String, rewardName: String) {
-        val phone = _phone.value
-        val prev  = lastCustomerLoaded ?: return
+    fun requestRedeem(rewardId: String, rewardName: String) {
+        val loaded = lastCustomerLoaded ?: return
         resetJob?.cancel()
+        if (!loaded.hasPIN) {
+            _state.value = KioskState.Error("No PIN set. Please visit our website to set up your PIN first.")
+            viewModelScope.launch {
+                delay(4000)
+                _state.value = loaded
+                scheduleAutoReset()
+            }
+            return
+        }
+        _state.value = KioskState.PinEntry(
+            customer         = loaded,
+            targetRewardId   = rewardId,
+            targetRewardName = rewardName
+        )
+    }
 
+    fun pinAppendDigit(digit: Char) {
+        val s = _state.value as? KioskState.PinEntry ?: return
+        if (s.pinDigits.length >= 4) return
+        val updated = s.copy(pinDigits = s.pinDigits + digit, error = null)
+        _state.value = updated
+        if (updated.pinDigits.length == 4) {
+            submitPin(updated)
+        }
+    }
+
+    fun pinBackspace() {
+        val s = _state.value as? KioskState.PinEntry ?: return
+        if (s.pinDigits.isNotEmpty()) _state.value = s.copy(pinDigits = s.pinDigits.dropLast(1), error = null)
+    }
+
+    fun cancelPin() {
+        val s = _state.value as? KioskState.PinEntry ?: return
+        _state.value = s.customer
+        lastCustomerLoaded = s.customer
+        scheduleAutoReset()
+    }
+
+    private fun submitPin(s: KioskState.PinEntry) {
+        val prev = s.customer
+        resetJob?.cancel()
         viewModelScope.launch {
             _state.value = KioskState.Redeeming
             try {
-                val resp = api.kioskRedeem(KioskRedeemRequest(phone, rewardId))
+                val resp = api.kioskRedeem(KioskRedeemRequest(prev.phone, s.targetRewardId, s.pinDigits))
                 val body = resp.body()
                 if (resp.isSuccessful && body?.success == true) {
                     _state.value = KioskState.RedeemSuccess(
                         customerName = prev.customerName,
-                        rewardName   = body.rewardName ?: rewardName,
+                        rewardName   = body.rewardName ?: s.targetRewardName,
                         pointsUsed   = body.pointsUsed ?: 0,
                         newPoints    = body.newPoints ?: 0,
                         tier         = body.tier ?: prev.tier
                     )
                     scheduleAutoReset(10_000L)
                 } else {
-                    _state.value = KioskState.Error(body?.message ?: "Redemption failed")
-                    delay(3000)
-                    _state.value = prev
+                    val msg = body?.message ?: "Redemption failed"
+                    _state.value = s.copy(pinDigits = "", error = msg)
                     scheduleAutoReset()
                 }
             } catch (e: Exception) {
-                _state.value = KioskState.Error("Connection error. Please try again.")
-                delay(3000)
-                _state.value = prev
+                _state.value = s.copy(pinDigits = "", error = "Connection error. Please try again.")
                 scheduleAutoReset()
             }
         }

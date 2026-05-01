@@ -2,7 +2,15 @@
 // Kiosk self-service endpoints (no auth required)
 // POST /api/kiosk/claim   — enter phone, earn points for recent payment
 // GET  /api/kiosk/rewards — list active rewards
-// POST /api/kiosk/redeem  — redeem a reward by phone + reward_id
+// POST /api/kiosk/redeem  — redeem a reward by phone + reward_id + pin
+
+if (!function_exists('phone10')) {
+    function phone10($raw) {
+        $d = preg_replace('/\D/', '', $raw);
+        if (strlen($d) === 11 && $d[0] === '1') $d = substr($d, 1);
+        return $d;
+    }
+}
 
 $db    = get_db();
 $nowMs = (int)(microtime(true) * 1000);
@@ -16,16 +24,23 @@ if ($method === 'GET' && $id === 'rewards') {
 // ── POST /api/kiosk/redeem ────────────────────────────────────────────────────
 if ($method === 'POST' && $id === 'redeem') {
     $body     = json_body();
-    $phone    = preg_replace('/\D/', '', isset($body['phone'])     ? $body['phone']     : '');
-    $rewardId = trim(                  isset($body['reward_id'])   ? $body['reward_id'] : '');
+    $phone    = phone10($body['phone']    ?? '');
+    $rewardId = trim($body['reward_id']   ?? '');
+    $pin      = trim($body['pin']         ?? '');
 
     if (strlen($phone) < 10) json_error('Invalid phone number');
     if (!$rewardId)           json_error('reward_id required');
 
-    $stmt = $db->prepare('SELECT * FROM customers WHERE phone=? OR phone=? LIMIT 1');
-    $stmt->execute([$phone, ltrim($phone, '1')]);
+    $stmt = $db->prepare('SELECT * FROM customers WHERE phone = ? LIMIT 1');
+    $stmt->execute([$phone]);
     $customer = $stmt->fetch();
     if (!$customer) json_error('Customer not found');
+
+    // Verify PIN if set
+    if (!empty($customer['pin_hash'])) {
+        if ($pin === '') json_error('PIN required to redeem');
+        if (!password_verify($pin, $customer['pin_hash'])) json_error('Incorrect PIN. Please try again.');
+    }
 
     $stmt = $db->prepare("SELECT * FROM rewards WHERE id=? AND is_active=1");
     $stmt->execute([$rewardId]);
@@ -89,6 +104,8 @@ $customer = find_or_create_loyalty_customer($db, $phone, '', $nowMs);
 $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
 $stmt->execute([$customer['id']]);
 $fullCustomer = $stmt->fetch();
+$fullCustomer['has_pin'] = !empty($fullCustomer['pin_hash']);
+unset($fullCustomer['pin_hash']);
 
 // Load Clover config
 $cfgRows      = $db->query('SELECT config_key, config_val FROM clover_config')->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -188,6 +205,8 @@ try {
 $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
 $stmt->execute([$customer['id']]);
 $fullCustomer = $stmt->fetch();
+$fullCustomer['has_pin'] = !empty($fullCustomer['pin_hash']);
+unset($fullCustomer['pin_hash']);
 
 json_success([
     'status'        => 'ok',

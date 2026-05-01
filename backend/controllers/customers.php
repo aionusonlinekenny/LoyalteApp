@@ -42,6 +42,26 @@ if ($method === 'POST' && $id === 'lookup') {
     json_success(['customer' => $c]);
 }
 
+// ── POST /api/customers/set_pin (public) ─────────────────────────────────────
+if ($method === 'POST' && $id === 'set_pin') {
+    $db    = get_db();
+    $body  = json_body();
+    $phone = phone10($body['phone'] ?? '');
+    $pin   = trim($body['pin'] ?? '');
+
+    if (strlen($phone) < 10)            json_error('Invalid phone number');
+    if (!preg_match('/^\d{4}$/', $pin)) json_error('PIN must be exactly 4 digits');
+
+    $stmt = $db->prepare('SELECT id FROM customers WHERE phone = ? LIMIT 1');
+    $stmt->execute([$phone]);
+    $c = $stmt->fetch();
+    if (!$c) json_error('Customer not found', 404);
+
+    $hash = password_hash($pin, PASSWORD_BCRYPT);
+    $db->prepare('UPDATE customers SET pin_hash = ? WHERE id = ?')->execute([$hash, $c['id']]);
+    json_success(['message' => 'PIN set successfully']);
+}
+
 auth_required();
 
 $db = get_db();

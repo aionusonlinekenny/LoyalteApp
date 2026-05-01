@@ -35,7 +35,8 @@ data class CustomerDto(
     val points: Int,
     @SerializedName("qr_code")    val qrCode: String,
     @SerializedName("created_at") val createdAt: Long,
-    @SerializedName("updated_at") val updatedAt: Long
+    @SerializedName("updated_at") val updatedAt: Long,
+    @SerializedName("has_pin")    val hasPin: Boolean? = null
 )
 
 data class CustomerResponse(
@@ -159,7 +160,8 @@ data class KioskClaimResponse(
 
 data class KioskRedeemRequest(
     val phone: String,
-    @SerializedName("reward_id") val rewardId: String
+    @SerializedName("reward_id") val rewardId: String,
+    val pin: String
 )
 
 data class KioskRedeemResponse(
