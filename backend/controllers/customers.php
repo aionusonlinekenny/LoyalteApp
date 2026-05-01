@@ -16,6 +16,16 @@ function phone10($raw) {
     return $d;
 }
 
+// Strip pin_hash, add has_pin boolean — never expose the hash to clients
+function sanitize_customer(array $c): array {
+    $c['has_pin'] = !empty($c['pin_hash']);
+    unset($c['pin_hash']);
+    return $c;
+}
+function sanitize_customers(array $rows): array {
+    return array_map('sanitize_customer', $rows);
+}
+
 // ── POST /api/customers/lookup (public, no auth) ──────────────────────────────
 if ($method === 'POST' && $id === 'lookup') {
     $db       = get_db();
@@ -72,7 +82,7 @@ if ($method === 'GET' && $id !== null && $sub === null) {
     $stmt->execute([$id]);
     $c = $stmt->fetch();
     if (!$c) json_error('Customer not found', 404);
-    json_success(['customer' => $c]);
+    json_success(['customer' => sanitize_customer($c)]);
 }
 
 // ── GET list / search ─────────────────────────────────────────────────────────
@@ -86,7 +96,7 @@ if ($method === 'GET' && $id === null) {
         $stmt->execute([$p10]);
         $c = $stmt->fetch();
         if (!$c) json_error('Customer not found', 404);
-        json_success(['customer' => $c]);
+        json_success(['customer' => sanitize_customer($c)]);
     }
 
     if ($qr) {
@@ -94,11 +104,11 @@ if ($method === 'GET' && $id === null) {
         $stmt->execute([$qr, $qr]);
         $c = $stmt->fetch();
         if (!$c) json_error('Customer not found', 404);
-        json_success(['customer' => $c]);
+        json_success(['customer' => sanitize_customer($c)]);
     }
 
     $stmt = $db->query('SELECT * FROM customers ORDER BY name');
-    json_success(['customers' => $stmt->fetchAll()]);
+    json_success(['customers' => sanitize_customers($stmt->fetchAll())]);
 }
 
 // ── POST create customer ──────────────────────────────────────────────────────
@@ -130,7 +140,7 @@ if ($method === 'POST' && $id === null) {
 
     $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
     $stmt->execute([$cid]);
-    json_success(['customer' => $stmt->fetch()], 201);
+    json_success(['customer' => sanitize_customer($stmt->fetch())], 201);
 }
 
 // ── DELETE /api/customers/{id} ────────────────────────────────────────────────
@@ -169,7 +179,33 @@ if ($method === 'PUT' && $id !== null && $sub === null) {
 
     $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
     $stmt->execute([$id]);
-    json_success(['customer' => $stmt->fetch()]);
+    json_success(['customer' => sanitize_customer($stmt->fetch())]);
+}
+
+// ── PUT /api/customers/{id}/pin — set/reset PIN (staff) ──────────────────────
+if ($method === 'PUT' && $id !== null && $sub === 'pin') {
+    $body = json_body();
+    $pin  = trim($body['pin'] ?? '');
+
+    if (!preg_match('/^\d{4}$/', $pin)) json_error('PIN must be exactly 4 digits');
+
+    $stmt = $db->prepare('SELECT id FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    if (!$stmt->fetch()) json_error('Customer not found', 404);
+
+    $hash = password_hash($pin, PASSWORD_BCRYPT);
+    $db->prepare('UPDATE customers SET pin_hash = ? WHERE id = ?')->execute([$hash, $id]);
+    json_success(['message' => 'PIN updated successfully']);
+}
+
+// ── PUT /api/customers/{id}/clear_pin — remove PIN (staff) ───────────────────
+if ($method === 'DELETE' && $id !== null && $sub === 'pin') {
+    $stmt = $db->prepare('SELECT id FROM customers WHERE id = ?');
+    $stmt->execute([$id]);
+    if (!$stmt->fetch()) json_error('Customer not found', 404);
+
+    $db->prepare('UPDATE customers SET pin_hash = NULL WHERE id = ?')->execute([$id]);
+    json_success(['message' => 'PIN cleared']);
 }
 
 // ── PUT /api/customers/{id}/points ────────────────────────────────────────────
@@ -206,7 +242,7 @@ if ($method === 'PUT' && $id !== null && $sub === 'points') {
 
     $stmt = $db->prepare('SELECT * FROM customers WHERE id = ?');
     $stmt->execute([$id]);
-    json_success(['customer' => $stmt->fetch()]);
+    json_success(['customer' => sanitize_customer($stmt->fetch())]);
 }
 
 json_error('Not found', 404);

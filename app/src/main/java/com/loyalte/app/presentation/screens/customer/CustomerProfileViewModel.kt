@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loyalte.app.data.remote.api.LoyalteApiService
 import com.loyalte.app.data.remote.api.dto.AddPointsRequest
+import com.loyalte.app.data.remote.api.dto.SetCustomerPinRequest
 import com.loyalte.app.data.remote.api.dto.UpdateCustomerRequest
 import com.loyalte.app.domain.model.Customer
 import com.loyalte.app.domain.model.LoyaltyTransaction
@@ -44,7 +45,13 @@ class CustomerProfileViewModel @Inject constructor(
         val showEditDialog: Boolean = false,
         val isSaving: Boolean = false,
         val editError: String? = null,
-        val editSuccess: String? = null
+        val editSuccess: String? = null,
+        // PIN management
+        val hasPin: Boolean? = null,
+        val showPinDialog: Boolean = false,
+        val isPinSaving: Boolean = false,
+        val pinError: String? = null,
+        val pinSuccess: String? = null
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -62,13 +69,17 @@ class CustomerProfileViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, errorMessage = "Customer not found") }
                     return@launch
                 }
+                // Fetch has_pin fresh from API (not cached in local Room DB)
+                val pinResp = api.getCustomerById(customerId)
+                val hasPin = pinResp.body()?.customer?.hasPin
                 loyaltyRepository.getTransactionsByCustomer(customerId).collect { transactions ->
                     val refreshed = customerRepository.getCustomerById(customerId)
                     _uiState.update {
                         it.copy(
                             customer = refreshed ?: customer,
                             transactions = transactions,
-                            isLoading = false
+                            isLoading = false,
+                            hasPin = hasPin
                         )
                     }
                 }
@@ -170,6 +181,52 @@ class CustomerProfileViewModel @Inject constructor(
 
     fun clearEditSuccess() {
         _uiState.update { it.copy(editSuccess = null) }
+    }
+
+    // ── PIN management ────────────────────────────────────────────────────────
+
+    fun openPinDialog() {
+        _uiState.update { it.copy(showPinDialog = true, pinError = null) }
+    }
+
+    fun closePinDialog() {
+        _uiState.update { it.copy(showPinDialog = false, pinError = null) }
+    }
+
+    fun setCustomerPin(pin: String) {
+        _uiState.update { it.copy(isPinSaving = true, pinError = null) }
+        viewModelScope.launch {
+            try {
+                val resp = api.setCustomerPin(customerId, SetCustomerPinRequest(pin))
+                if (resp.isSuccessful && resp.body()?.success == true) {
+                    _uiState.update {
+                        it.copy(isPinSaving = false, showPinDialog = false,
+                                hasPin = true, pinSuccess = "PIN updated successfully")
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(isPinSaving = false, pinError = resp.body()?.message ?: "Failed to set PIN")
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isPinSaving = false, pinError = "Connection error") }
+            }
+        }
+    }
+
+    fun clearCustomerPin() {
+        viewModelScope.launch {
+            try {
+                val resp = api.clearCustomerPin(customerId)
+                if (resp.isSuccessful && resp.body()?.success == true) {
+                    _uiState.update { it.copy(hasPin = false, pinSuccess = "PIN cleared") }
+                }
+            } catch (_: Exception) { /* non-fatal */ }
+        }
+    }
+
+    fun clearPinSuccess() {
+        _uiState.update { it.copy(pinSuccess = null) }
     }
 
     fun getCustomerId(): String = customerId

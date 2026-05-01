@@ -52,6 +52,17 @@ interface LoyalteApiService {
         @Body body: AddPointsRequest
     ): Response<CustomerResponse>
 
+    @PUT("customers/{id}/pin")
+    suspend fun setCustomerPin(
+        @Path("id") id: String,
+        @Body body: SetCustomerPinRequest
+    ): Response<SimpleResponse>
+
+    @DELETE("customers/{id}/pin")
+    suspend fun clearCustomerPin(
+        @Path("id") id: String
+    ): Response<SimpleResponse>
+
     @DELETE("customers/{id}")
     suspend fun deleteCustomer(
         @Path("id") id: String

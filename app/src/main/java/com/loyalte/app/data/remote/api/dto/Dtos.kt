@@ -189,6 +189,8 @@ data class SaveRewardRequest(
     @SerializedName("is_active") val isActive: Int
 )
 
+data class SetCustomerPinRequest(val pin: String)
+
 // ─── Simple Response ──────────────────────────────────────────────────────────
 
 data class SimpleResponse(

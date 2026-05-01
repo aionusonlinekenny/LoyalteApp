@@ -11,9 +11,12 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,6 +61,13 @@ fun CustomerProfileScreen(
         uiState.editSuccess?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearEditSuccess()
+        }
+    }
+
+    LaunchedEffect(uiState.pinSuccess) {
+        uiState.pinSuccess?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPinSuccess()
         }
     }
 
@@ -210,6 +220,13 @@ fun CustomerProfileScreen(
                                     label = "Tier",
                                     value = customer.tier.displayName
                                 )
+
+                                // PIN row
+                                PinDetailRow(
+                                    hasPin = uiState.hasPin,
+                                    onSetPin = viewModel::openPinDialog,
+                                    onClearPin = viewModel::clearCustomerPin
+                                )
                             }
                         }
                     }
@@ -260,6 +277,17 @@ fun CustomerProfileScreen(
             error = uiState.adjustError,
             onDismiss = viewModel::closeAdjustDialog,
             onConfirm = { delta, desc -> viewModel.adjustPoints(delta, desc) }
+        )
+    }
+
+    // Set PIN dialog
+    if (uiState.showPinDialog) {
+        SetPinDialog(
+            hasPin = uiState.hasPin == true,
+            isSaving = uiState.isPinSaving,
+            error = uiState.pinError,
+            onDismiss = viewModel::closePinDialog,
+            onConfirm = { pin -> viewModel.setCustomerPin(pin) }
         )
     }
 }
@@ -446,6 +474,156 @@ private fun AdjustPointsDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isAdjusting) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun PinDetailRow(
+    hasPin: Boolean?,
+    onSetPin: () -> Unit,
+    onClearPin: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompositionLocalProvider(
+            LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = null)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "Kiosk PIN",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            when (hasPin) {
+                true  -> Text(
+                    "Set ✓",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2E7D32)
+                )
+                false -> Text(
+                    "Not set",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                null  -> Text(
+                    "—",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        TextButton(onClick = onSetPin) {
+            Text(if (hasPin == true) "Reset" else "Set PIN")
+        }
+        if (hasPin == true) {
+            TextButton(
+                onClick = onClearPin,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Clear")
+            }
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SetPinDialog(
+    hasPin: Boolean,
+    isSaving: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (pin: String) -> Unit
+) {
+    var pin     by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var pinErr  by remember { mutableStateOf(false) }
+    var confErr by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSaving) onDismiss() },
+        title = { Text(if (hasPin) "Reset Customer PIN" else "Set Customer PIN", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Enter a new 4-digit PIN for this customer's kiosk redemptions.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = {
+                        if (it.all { c -> c.isDigit() } && it.length <= 4) {
+                            pin = it; pinErr = false
+                        }
+                    },
+                    label = { Text("New PIN *") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    singleLine = true,
+                    isError = pinErr,
+                    supportingText = if (pinErr) ({ Text("Must be 4 digits") }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = {
+                        if (it.all { c -> c.isDigit() } && it.length <= 4) {
+                            confirm = it; confErr = false
+                        }
+                    },
+                    label = { Text("Confirm PIN *") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    singleLine = true,
+                    isError = confErr,
+                    supportingText = if (confErr) ({ Text("PINs do not match") }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    pinErr  = pin.length != 4
+                    confErr = pin != confirm
+                    if (!pinErr && !confErr) onConfirm(pin)
+                },
+                enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Save PIN")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cancel") }
         }
     )
 }
