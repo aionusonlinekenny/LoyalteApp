@@ -11,6 +11,7 @@ interface CustomerInfo {
   name: string;
   tier: string;
   points: number;
+  has_pin: boolean;
 }
 
 interface LoyaltyProps {
@@ -134,7 +135,6 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
   const [checkLoading, setCheckLoading] = useState(false);
   const [checkResult, setCheckResult] = useState<CustomerInfo | null>(null);
   const [checkError, setCheckError] = useState('');
-  const [checkPinOpen, setCheckPinOpen] = useState(false);
   const [checkPinValue, setCheckPinValue] = useState('');
   const [checkPinConfirm, setCheckPinConfirm] = useState('');
 
@@ -143,7 +143,6 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
     setCheckLoading(true);
     setCheckError('');
     setCheckResult(null);
-    setCheckPinOpen(false);
     setCheckPinValue('');
     setCheckPinConfirm('');
     setPinDone(false);
@@ -367,46 +366,41 @@ const Loyalty: React.FC<LoyaltyProps> = ({ deviceInfo, forcedDevice }) => {
                     </div>
                   </div>
 
-                  {/* PIN setup / change for existing members */}
-                  {!pinDone ? (
-                    <div className="mt-4">
-                      <button
-                        onClick={() => { setCheckPinOpen(o => !o); setPinError(''); setCheckPinValue(''); setCheckPinConfirm(''); }}
-                        className="w-full text-sm text-gray-400 hover:text-gray-200 py-2 transition-colors flex items-center justify-center gap-2"
-                      >
-                        🔐 {checkPinOpen ? 'Hide' : 'Set or change my kiosk PIN'}
-                      </button>
-                      {checkPinOpen && (
-                        <div className="mt-2 bg-gray-700/60 border border-gray-600 rounded-xl p-4 space-y-3">
-                          <p className="text-xs text-gray-400 text-center">Set a 4-digit PIN to confirm reward redemptions at the kiosk.</p>
-                          <input
-                            type="password" inputMode="numeric" maxLength={4}
-                            value={checkPinValue}
-                            onChange={e => { setCheckPinValue(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
-                            placeholder="New 4-digit PIN"
-                            className="w-full text-center tracking-[0.4em] text-xl py-3 bg-gray-800 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 placeholder-gray-600"
-                          />
-                          <input
-                            type="password" inputMode="numeric" maxLength={4}
-                            value={checkPinConfirm}
-                            onChange={e => { setCheckPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
-                            placeholder="Confirm PIN"
-                            className="w-full text-center tracking-[0.4em] text-xl py-3 bg-gray-800 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-red-500 placeholder-gray-600"
-                          />
-                          {pinError && <p className="text-red-400 text-xs text-center">{pinError}</p>}
-                          <button
-                            onClick={() => handleSetPin(checkPhone, checkPinValue, checkPinConfirm)}
-                            disabled={pinLoading || checkPinValue.length < 4 || checkPinConfirm.length < 4}
-                            className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
-                          >
-                            {pinLoading ? <><Loader className="w-4 h-4 animate-spin" /> Saving...</> : 'Save PIN'}
-                          </button>
-                        </div>
-                      )}
+                  {/* Auto-show PIN setup only if customer doesn't have one yet */}
+                  {!checkResult.has_pin && !pinDone && (
+                    <div className="mt-4 bg-blue-900/30 border border-blue-500/40 rounded-2xl p-5">
+                      <p className="text-blue-300 font-semibold text-sm text-center mb-3">
+                        🔐 Set a PIN to redeem rewards at the kiosk
+                      </p>
+                      <div className="space-y-3">
+                        <input
+                          type="password" inputMode="numeric" maxLength={4}
+                          value={checkPinValue}
+                          onChange={e => { setCheckPinValue(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                          placeholder="Enter 4-digit PIN"
+                          className="w-full text-center tracking-[0.4em] text-2xl py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                        />
+                        <input
+                          type="password" inputMode="numeric" maxLength={4}
+                          value={checkPinConfirm}
+                          onChange={e => { setCheckPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4)); setPinError(''); }}
+                          placeholder="Confirm PIN"
+                          className="w-full text-center tracking-[0.4em] text-2xl py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                        />
+                        {pinError && <p className="text-red-400 text-xs text-center">{pinError}</p>}
+                        <button
+                          onClick={() => handleSetPin(checkPhone, checkPinValue, checkPinConfirm)}
+                          disabled={pinLoading || checkPinValue.length < 4 || checkPinConfirm.length < 4}
+                          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 text-white py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                        >
+                          {pinLoading ? <><Loader className="w-5 h-5 animate-spin" /> Saving...</> : 'Set My PIN'}
+                        </button>
+                      </div>
                     </div>
-                  ) : (
+                  )}
+                  {!checkResult.has_pin && pinDone && (
                     <div className="mt-3 flex items-center justify-center gap-2 text-green-400 text-sm">
-                      <CheckCircle className="w-4 h-4" /> PIN saved successfully!
+                      <CheckCircle className="w-4 h-4" /> PIN saved! Use it at the kiosk to redeem rewards.
                     </div>
                   )}
                 </>

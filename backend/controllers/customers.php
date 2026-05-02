@@ -37,18 +37,20 @@ if ($method === 'POST' && $id === 'lookup') {
 
     if ($phone) {
         $stmt = $db->prepare(
-            'SELECT id, member_id, name, tier, points FROM customers WHERE phone = ? LIMIT 1'
+            'SELECT id, member_id, name, tier, points, pin_hash FROM customers WHERE phone = ? LIMIT 1'
         );
         $stmt->execute([$phone]);
     } else {
         $stmt = $db->prepare(
-            'SELECT id, member_id, name, tier, points FROM customers WHERE member_id = ? LIMIT 1'
+            'SELECT id, member_id, name, tier, points, pin_hash FROM customers WHERE member_id = ? LIMIT 1'
         );
         $stmt->execute([$memberId]);
     }
 
     $c = $stmt->fetch();
     if (!$c) json_error('Customer not found', 404);
+    $c['has_pin'] = !empty($c['pin_hash']);
+    unset($c['pin_hash']);
     json_success(['customer' => $c]);
 }
 
