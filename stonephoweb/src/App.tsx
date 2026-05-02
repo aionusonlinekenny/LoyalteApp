@@ -11,6 +11,7 @@ import Gallery from './components/Gallery';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Loyalty from './components/Loyalty';
+import CustomerPortal from './components/CustomerPortal';
 
 function App() {
   const deviceInfo = useDeviceDetection();
@@ -95,6 +96,7 @@ function App() {
       <Gallery deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
       <Contact deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
       <Loyalty deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+      <CustomerPortal deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
       <Footer deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
       <DeviceSwitch 
         deviceInfo={deviceInfo} 

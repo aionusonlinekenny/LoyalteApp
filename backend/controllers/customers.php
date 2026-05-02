@@ -54,6 +54,30 @@ if ($method === 'POST' && $id === 'lookup') {
     json_success(['customer' => $c]);
 }
 
+// ── POST /api/customers/portal_login (public) ────────────────────────────────
+if ($method === 'POST' && $id === 'portal_login') {
+    $db    = get_db();
+    $body  = json_body();
+    $phone = phone10($body['phone'] ?? '');
+    $pin   = trim($body['pin']   ?? '');
+
+    if (strlen($phone) < 10) json_error('Invalid phone number');
+    if (!$pin)                json_error('PIN is required');
+
+    $stmt = $db->prepare('SELECT * FROM customers WHERE phone = ? LIMIT 1');
+    $stmt->execute([$phone]);
+    $c = $stmt->fetch();
+    if (!$c)                   json_error('Phone number not found in our system');
+    if (empty($c['pin_hash'])) json_error('No PIN set. Please visit the Check My Points section to create one first.');
+    if (!password_verify($pin, $c['pin_hash'])) json_error('Incorrect PIN. Please try again.');
+
+    $c['has_pin'] = true;
+    unset($c['pin_hash']);
+
+    $rewards = $db->query('SELECT * FROM rewards WHERE is_active = 1 ORDER BY points_required ASC')->fetchAll();
+    json_success(['customer' => $c, 'rewards' => $rewards]);
+}
+
 // ── POST /api/customers/set_pin (public) ─────────────────────────────────────
 if ($method === 'POST' && $id === 'set_pin') {
     $db    = get_db();

@@ -23,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
       { id: '5', name: 'Gallery', href: '#gallery', isExternal: false, isButton: false, buttonStyle: 'primary' },
       { id: '6', name: 'Contact', href: '#contact', isExternal: false, isButton: false, buttonStyle: 'primary' },
       { id: '8', name: '⭐ Rewards', href: '#loyalty', isExternal: false, isButton: false, buttonStyle: 'primary' },
+      { id: '9', name: '👤 My Account', href: '#my-account', isExternal: false, isButton: false, buttonStyle: 'primary' },
       { id: '7', name: 'Order Delivery', href: 'https://order.online/business/stone-pho-lp-14380597', isExternal: true, isButton: true, buttonStyle: 'success' }
     ]
   });
