@@ -9,7 +9,7 @@ interface Review {
 
 interface Slide {
   id: string;
-  type: "main" | "reviews" | "special";
+  type: "main" | "reviews" | "special" | "memorial";
   title?: string;
   subtitle?: string;
   buttonText?: string;
@@ -18,6 +18,12 @@ interface Slide {
 }
 
 const slides: Slide[] = [
+  {
+    id: "memorial-1",
+    type: "memorial",
+    title: "Memorial Day",
+    subtitle: "Honoring memories, sharing comfort, and serving bold flavors.",
+  },
   {
     id: "main-1",
     type: "main",
@@ -97,8 +103,16 @@ const Hero: React.FC = () => {
         backgroundPosition: "center",
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-white/30 z-0"></div>
+      {/* Overlay - darker for memorial slide */}
+      <div
+        className="absolute inset-0 z-0 transition-colors duration-700"
+        style={{
+          background:
+            slides[currentSlide]?.type === "memorial"
+              ? "rgba(15, 23, 60, 0.62)"
+              : "rgba(255,255,255,0.30)",
+        }}
+      ></div>
 
       {/* Slider wrapper */}
       <div className="relative z-10 w-full h-full flex items-center justify-center">
@@ -110,6 +124,52 @@ const Hero: React.FC = () => {
                 currentSlide === index ? "opacity-100 z-10" : "opacity-0 z-0"
               }`}
             >
+              {slide.type === "memorial" && (
+                <div className="flex flex-col items-center justify-center px-6 text-center">
+                  {/* Three stars */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <span style={{ color: "#DC2626", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
+                    <span style={{ color: "#E2E8F0", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
+                    <span style={{ color: "#3B82F6", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
+                  </div>
+
+                  {/* Title */}
+                  <h1
+                    className="font-bold text-white mb-6 drop-shadow-lg"
+                    style={{
+                      fontSize: "clamp(3rem, 10vw, 6rem)",
+                      fontFamily: "Georgia, 'Times New Roman', serif",
+                      letterSpacing: "-0.01em",
+                      textShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {slide.title}
+                  </h1>
+
+                  {/* Subtitle */}
+                  <p
+                    className="text-white mb-8 drop-shadow-lg max-w-xl"
+                    style={{
+                      fontSize: "clamp(1rem, 3vw, 1.5rem)",
+                      fontStyle: "italic",
+                      fontFamily: "Georgia, 'Times New Roman', serif",
+                      textShadow: "0 2px 8px rgba(0,0,0,0.6)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {slide.subtitle}
+                  </p>
+
+                  {/* Divider with center star */}
+                  <div className="flex items-center justify-center gap-3 w-full max-w-sm">
+                    <div className="flex-1 h-px bg-white/70"></div>
+                    <span style={{ color: "#DC2626", fontSize: "1.25rem", lineHeight: 1 }}>★</span>
+                    <div className="flex-1 h-px bg-white/70"></div>
+                  </div>
+                </div>
+              )}
+
               {slide.type === "main" && (
                 <>
                   <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">
