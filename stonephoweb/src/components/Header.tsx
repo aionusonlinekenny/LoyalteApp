@@ -43,6 +43,10 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
   // Header background opacity based on scroll
   const headerOpacity = Math.min(scrollY / 100, 0.95);
   const headerTransform = isScrollingDown && scrollY > 100 ? '-translate-y-full' : 'translate-y-0';
+  const isScrolled = scrollY > 80;
+  const textColor = isScrolled ? 'text-gray-800' : 'text-white';
+  const textHover = isScrolled ? 'hover:text-red-600' : 'hover:text-red-300';
+  const iconColor = isScrolled ? 'text-gray-800' : 'text-white';
 
   return (
     <header 
@@ -79,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                 href={item.href}
                 target={item.isExternal ? '_blank' : '_self'}
                 rel={item.isExternal ? 'noopener noreferrer' : undefined}
-                className="text-white hover:text-red-600 transition-colors font-medium"
+                className={`${textColor} ${textHover} transition-colors font-medium`}
               >
                 {item.name}
               </a>
@@ -102,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
           {/* Mobile menu button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`${isMobileView ? 'block' : 'md:hidden'} p-2 rounded-md text-white hover:text-red-600 hover:bg-gray-100`}
+            className={`${isMobileView ? 'block' : 'md:hidden'} p-2 rounded-md ${iconColor} hover:text-red-600 hover:bg-gray-100`}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -118,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                   href={item.href}
                   target={item.isExternal ? '_blank' : '_self'}
                   rel={item.isExternal ? 'noopener noreferrer' : undefined}
-                  className="text-white hover:text-red-600 transition-colors font-medium"
+                  className={`${textColor} ${textHover} transition-colors font-medium`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
