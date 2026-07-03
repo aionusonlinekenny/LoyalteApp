@@ -21,8 +21,8 @@ const slides: Slide[] = [
   {
     id: "memorial-1",
     type: "memorial",
-    title: "Memorial Day",
-    subtitle: "Honoring memories, sharing comfort, and serving bold flavors.",
+    title: "Happy July 4th",
+    subtitle: "Celebrating freedom with bold flavors and great company.",
   },
   {
     id: "main-1",
