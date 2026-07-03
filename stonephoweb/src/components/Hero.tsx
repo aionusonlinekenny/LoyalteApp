@@ -87,13 +87,14 @@ const Hero: React.FC = () => {
     loadHeroConfig();
   }, []);
 
-  // Auto slide
+  // Auto slide — memorial slide stays longer (9s), others 5s
   useEffect(() => {
-    const timer = setInterval(() => {
+    const duration = slides[currentSlide]?.type === "memorial" ? 9000 : 5000;
+    const timer = setTimeout(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    }, duration);
+    return () => clearTimeout(timer);
+  }, [currentSlide]);
 
   return (
     <section
