@@ -60,6 +60,14 @@ const es = {
     heading: 'Nuestro Menú',
     subtitle:
       'Descubre nuestros auténticos platos vietnamitas, desde el pho tradicional hasta aperitivos llenos de sabor y platos principales contundentes.',
+    categories: {
+      pho: 'Pho',
+      appetizers: 'Aperitivos',
+      vermicelli: 'Fideos de Arroz',
+      specialty: 'Especialidades del Chef',
+      rice: 'Platos de Arroz',
+      beverages: 'Bebidas',
+    },
   },
   gallery: {
     heading: 'Galería',

@@ -60,6 +60,14 @@ const en = {
     heading: 'Our Menu',
     subtitle:
       'Discover our authentic Vietnamese dishes, from traditional pho to flavorful appetizers and hearty main courses.',
+    categories: {
+      pho: 'Pho',
+      appetizers: 'Appetizers',
+      vermicelli: 'Rice Vermicelli',
+      specialty: "Chef's Specialties",
+      rice: 'Rice Dishes',
+      beverages: 'Beverages',
+    },
   },
   gallery: {
     heading: 'Gallery',

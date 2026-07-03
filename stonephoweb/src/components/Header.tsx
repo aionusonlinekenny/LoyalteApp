@@ -96,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                 href={item.href}
                 target={item.isExternal ? '_blank' : '_self'}
                 rel={item.isExternal ? 'noopener noreferrer' : undefined}
-                className={`${textColor} ${textHover} transition-colors font-medium`}
+                className={`${textColor} ${textHover} transition-colors font-medium whitespace-nowrap`}
               >
                 {navName(item)}
               </a>
@@ -136,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                   href={item.href}
                   target={item.isExternal ? '_blank' : '_self'}
                   rel={item.isExternal ? 'noopener noreferrer' : undefined}
-                  className={`${textColor} ${textHover} transition-colors font-medium`}
+                  className={`${textColor} ${textHover} transition-colors font-medium whitespace-nowrap`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {navName(item)}

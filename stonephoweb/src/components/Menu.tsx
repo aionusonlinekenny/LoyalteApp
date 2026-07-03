@@ -71,13 +71,9 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
 
   const displayCategories = categories.map(cat => ({
     id: cat,
-    name: cat === 'pho' ? 'Pho' :
-          cat === 'appetizers' ? 'Appetizers' :
-          cat === 'vermicelli' ? 'Rice Vermicelli' :
-          cat === 'specialty' ? 'Chef\'s Specialties' :
-          cat === 'rice' ? 'Rice Dishes' :
-          cat === 'beverages' ? 'Beverages' :
-          cat.charAt(0).toUpperCase() + cat.slice(1)
+    name: t(`menu.categories.${cat}`) !== `menu.categories.${cat}`
+      ? t(`menu.categories.${cat}`)
+      : cat.charAt(0).toUpperCase() + cat.slice(1),
   }));
 
   return (
