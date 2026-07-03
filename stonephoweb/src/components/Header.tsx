@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Menu, X, Utensils } from 'lucide-react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface HeaderProps {
   deviceInfo: DeviceInfo;
@@ -28,8 +30,17 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
     ]
   });
   
+  const { t } = useLanguage();
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobileView = currentDevice === 'mobile';
+
+  const navKeyMap: Record<string, string> = {
+    '1': 'nav.home', '2': 'nav.about', '3': 'nav.menu',
+    '4': 'nav.orderOnline', '5': 'nav.gallery', '6': 'nav.contact',
+    '7': 'nav.orderDelivery', '8': 'nav.rewards', '9': 'nav.myAccount',
+  };
+  const navName = (item: { id: string; name: string }) =>
+    navKeyMap[item.id] ? t(navKeyMap[item.id]) : item.name;
 
   // Load header settings from localStorage
   React.useEffect(() => {
@@ -87,9 +98,10 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                 rel={item.isExternal ? 'noopener noreferrer' : undefined}
                 className={`${textColor} ${textHover} transition-colors font-medium`}
               >
-                {item.name}
+                {navName(item)}
               </a>
             ))}
+            <LanguageSwitcher />
             {buttonMenuItems.map((item) => (
               <button
                 key={item.id}
@@ -100,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                   'bg-orange-600 hover:bg-orange-700 text-white'
                 }`}
               >
-                {item.name}
+                {navName(item)}
               </button>
             ))}
           </nav>
@@ -127,9 +139,10 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
                   className={`${textColor} ${textHover} transition-colors font-medium`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {item.name}
+                  {navName(item)}
                 </a>
               ))}
+              <div className="pt-2"><LanguageSwitcher /></div>
               {buttonMenuItems.map((item) => (
                 <button
                   key={item.id}

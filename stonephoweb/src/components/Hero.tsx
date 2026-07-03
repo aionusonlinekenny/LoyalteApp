@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface Review {
   name: string;
@@ -66,6 +67,7 @@ const slides: Slide[] = [
 ];
 
 const Hero: React.FC = () => {
+  const { t } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroBackground, setHeroBackground] = useState<string>("");
 
@@ -147,7 +149,7 @@ const Hero: React.FC = () => {
                       lineHeight: 1.1,
                     }}
                   >
-                    {slide.title}
+                    {t('hero.holiday.title')}
                   </h1>
 
                   {/* Subtitle */}
@@ -161,7 +163,7 @@ const Hero: React.FC = () => {
                       lineHeight: 1.6,
                     }}
                   >
-                    {slide.subtitle}
+                    {t('hero.holiday.subtitle')}
                   </p>
 
                   {/* Divider with center star */}
@@ -182,7 +184,7 @@ const Hero: React.FC = () => {
                         letterSpacing: "0.04em",
                       }}
                     >
-                      {slide.hours}
+                      {t('hero.holiday.hours')}
                     </p>
                   )}
                 </div>
@@ -191,10 +193,10 @@ const Hero: React.FC = () => {
               {slide.type === "main" && (
                 <>
                   <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">
-                    {slide.title}
+                    {t('hero.main.title')}
                   </h1>
                   <p className="text-lg md:text-2xl mb-8 drop-shadow-lg">
-                    {slide.subtitle}
+                    {t('hero.main.subtitle')}
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     {slide.buttonText && (
@@ -204,17 +206,16 @@ const Hero: React.FC = () => {
                         rel="noopener noreferrer"
                         className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
                       >
-                        {slide.buttonText}
+                        {t('hero.main.orderNow')}
                       </a>
                     )}
-                    {/* ✅ Nút Delivery thêm vào slide đầu tiên */}
                     <a
                       href="https://order.online/business/stone-pho-lp-14380597"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
                     >
-                      Order Delivery
+                      {t('hero.main.orderDelivery')}
                     </a>
                   </div>
                 </>
@@ -223,7 +224,7 @@ const Hero: React.FC = () => {
               {slide.type === "reviews" && (
                 <div className="max-w-4xl mx-auto">
                   <h2 className="text-3xl md:text-4xl font-bold mb-8">
-                    What Our Customers Say
+                    {t('hero.reviews.heading')}
                   </h2>
                   <div className="grid gap-4 mb-8 max-w-4xl mx-auto grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                     {slide.reviews?.map((review, idx) => (
@@ -252,7 +253,7 @@ const Hero: React.FC = () => {
                     rel="noopener noreferrer"
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
                   >
-                    Read More Reviews
+                    {t('hero.reviews.readMore')}
                   </a>
                 </div>
               )}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, Award, Users } from 'lucide-react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import ScrollAnimatedSection from './ScrollAnimatedSection';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AboutProps {
   deviceInfo: DeviceInfo;
@@ -9,6 +10,7 @@ interface AboutProps {
 }
 
 const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
+  const { t } = useLanguage();
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobileView = currentDevice === 'mobile';
   const isTabletView = currentDevice === 'tablet';
@@ -30,13 +32,12 @@ const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
             <h2 className={`font-bold text-gray-900 mb-4 ${
               isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'
             }`}>
-              Our Story
+              {t('about.heading')}
             </h2>
             <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${
               isMobileView ? 'text-lg' : 'text-xl'
             }`}>
-              Founded with a passion for authentic Vietnamese cuisine, Stone Pho 
-              has been serving traditional flavors and bringing families together since our doors first opened.
+              {t('about.subtitle')}
             </p>
           </div>
         </ScrollAnimatedSection>
@@ -60,20 +61,17 @@ const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
               <h3 className={`font-bold text-gray-900 ${
                 isMobileView ? 'text-2xl' : 'text-3xl'
               }`}>
-                Authentic Vietnamese Tradition
+                {t('about.tradition.heading')}
               </h3>
               <p className={`text-gray-600 leading-relaxed ${
                 isMobileView ? 'text-base' : 'text-lg'
               }`}>
-                Every bowl at Stone Pho is a testament to our commitment to authenticity. We use traditional 
-                recipes passed down through generations, ensuring that each spoonful delivers the true taste 
-                of Vietnam with fresh ingredients and time-honored cooking methods.
+                {t('about.tradition.p1')}
               </p>
               <p className={`text-gray-600 leading-relaxed ${
                 isMobileView ? 'text-base' : 'text-lg'
               }`}>
-                Our skilled chefs prepare each broth with care, simmering bones and spices for hours to 
-                achieve the perfect depth of flavor that makes our pho truly exceptional.
+                {t('about.tradition.p2')}
               </p>
             </div>
           </ScrollAnimatedSection>
@@ -98,13 +96,12 @@ const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
               <h4 className={`font-bold text-gray-900 mb-4 ${
                 isMobileView ? 'text-xl' : 'text-2xl'
               }`}>
-                Made with Love
+                {t('about.cards.love.title')}
               </h4>
               <p className={`text-gray-600 leading-relaxed ${
                 isMobileView ? 'text-sm' : ''
               }`}>
-                Every dish is prepared with care and attention to detail, ensuring the perfect 
-                balance of flavors and authentic Vietnamese taste.
+                {t('about.cards.love.body')}
               </p>
             </div>
           </ScrollAnimatedSection>
@@ -121,13 +118,12 @@ const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
               <h4 className={`font-bold text-gray-900 mb-4 ${
                 isMobileView ? 'text-xl' : 'text-2xl'
               }`}>
-                Premium Quality
+                {t('about.cards.quality.title')}
               </h4>
               <p className={`text-gray-600 leading-relaxed ${
                 isMobileView ? 'text-sm' : ''
               }`}>
-                We source only the freshest ingredients and highest quality meats, ensuring exceptional 
-                taste in every bowl we serve.
+                {t('about.cards.quality.body')}
               </p>
             </div>
           </ScrollAnimatedSection>
@@ -144,13 +140,12 @@ const About: React.FC<AboutProps> = ({ deviceInfo, forcedDevice }) => {
               <h4 className={`font-bold text-gray-900 mb-4 ${
                 isMobileView ? 'text-xl' : 'text-2xl'
               }`}>
-                Community Focus
+                {t('about.cards.community.title')}
               </h4>
               <p className={`text-gray-600 leading-relaxed ${
                 isMobileView ? 'text-sm' : ''
               }`}>
-                More than just a restaurant, we're a gathering place where friendships 
-                are formed and memories are made.
+                {t('about.cards.community.body')}
               </p>
             </div>
           </ScrollAnimatedSection>

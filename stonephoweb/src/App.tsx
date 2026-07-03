@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDeviceDetection } from './hooks/useDeviceDetection';
+import { LanguageProvider } from './contexts/LanguageContext';
 import DeviceSwitch from './components/DeviceSwitch';
 import MaintenanceMode from './components/MaintenanceMode';
 import AdminRoute from './components/AdminRoute';
@@ -86,20 +87,22 @@ function App() {
 
   // PRIORITY 3: Normal Website
   return (
-    <div className="min-h-screen">
-      <Header deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <Hero deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <About deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <Menu deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <Gallery deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <Contact deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <Footer deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
-      <DeviceSwitch 
-        deviceInfo={deviceInfo} 
-        onDeviceSwitch={handleDeviceSwitch}
-        forcedDevice={forcedDevice}
-      />
-    </div>
+    <LanguageProvider>
+      <div className="min-h-screen">
+        <Header deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <Hero deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <About deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <Menu deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <Gallery deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <Contact deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <Footer deviceInfo={deviceInfo} forcedDevice={forcedDevice} />
+        <DeviceSwitch
+          deviceInfo={deviceInfo}
+          onDeviceSwitch={handleDeviceSwitch}
+          forcedDevice={forcedDevice}
+        />
+      </div>
+    </LanguageProvider>
   );
 }
 

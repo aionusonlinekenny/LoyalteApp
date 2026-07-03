@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import ScrollAnimatedSection from './ScrollAnimatedSection';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface MenuProps {
   deviceInfo: DeviceInfo;
@@ -8,6 +9,7 @@ interface MenuProps {
 }
 
 const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
+  const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('pho');
   const [categories, setCategories] = useState<string[]>(['appetizers', 'pho', 'vermicelli', 'specialty', 'rice', 'beverages']);
 
@@ -92,10 +94,10 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
         <ScrollAnimatedSection animation="fadeInUp" className="text-center mb-16">
           <div>
             <h2 className={`font-bold text-gray-900 mb-4 ${isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'}`}>
-              Our Menu
+              {t('menu.heading')}
             </h2>
             <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${isMobileView ? 'text-lg' : 'text-xl'}`}>
-              Discover our authentic Vietnamese dishes, from traditional pho to flavorful appetizers and hearty main courses.
+              {t('menu.subtitle')}
             </p>
           </div>
         </ScrollAnimatedSection>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapPin, Phone, Clock, Mail, Instagram, Facebook, Twitter } from 'lucide-react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import ScrollAnimatedSection from './ScrollAnimatedSection';
+import { useLanguage } from '../contexts/LanguageContext';
 
 
 interface ContactProps {
@@ -10,6 +11,7 @@ interface ContactProps {
 }
 
 const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
+  const { t } = useLanguage();
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobileView = currentDevice === 'mobile';
     // Google Reviews state
@@ -54,12 +56,12 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
             <h2 className={`font-bold text-gray-900 mb-4 ${
               isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'
             }`}>
-              Visit Us
+              {t('contact.heading')}
             </h2>
             <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${
               isMobileView ? 'text-lg' : 'text-xl'
             }`}>
-              Come experience the warmth and authentic flavors that make Stone Pho special.
+              {t('contact.subtitle')}
             </p>
           </div>
         </ScrollAnimatedSection>
@@ -80,7 +82,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                 <h3 className={`font-bold text-gray-900 mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
-                  Location
+                  {t('contact.location')}
                 </h3>
                 <p className={`text-gray-600 leading-relaxed ${
                   isMobileView ? 'text-sm' : ''
@@ -101,7 +103,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                 <h3 className={`font-bold text-gray-900 mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
-                  Phone
+                  {t('contact.phone')}
                 </h3>
                 <p className={`text-gray-600 ${isMobileView ? 'text-sm' : ''}`}>
                   (229) 491-9905
@@ -119,7 +121,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                 <h3 className={`font-bold text-gray-900 mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
-                  Email
+                  {t('contact.email')}
                 </h3>
                 <p className={`text-gray-600 ${isMobileView ? 'text-sm' : ''}`}>
                   stonephovaldosta@gmail.com
@@ -137,15 +139,15 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                 <h3 className={`font-bold text-gray-900 mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
-                  Hours
+                  {t('contact.hours')}
                 </h3>
                 <div className={`text-gray-600 space-y-1 ${
                   isMobileView ? 'text-sm' : ''
                 }`}>
-                  <p>Monday: 11:00 AM - 7:00 PM</p>
-                  <p>Tuesday: WE CLOSED</p>
-                  <p>Wednesday - Saturday: 11:00 AM - 8:45 PM</p>
-                  <p>Sunday: 11:00 AM - 6:00 PM</p>
+                  <p>{t('contact.hoursData.mon')}</p>
+                  <p>{t('contact.hoursData.tue')}</p>
+                  <p>{t('contact.hoursData.wedSat')}</p>
+                  <p>{t('contact.hoursData.sun')}</p>
                 </div>
               </div>
             </div>
@@ -155,7 +157,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
               <h3 className={`font-bold text-gray-900 mb-4 ${
                 isMobileView ? 'text-lg' : 'text-xl'
               }`}>
-                Follow Us
+                {t('contact.followUs')}
               </h3>
               <div className="flex space-x-4">
                 <a
@@ -195,7 +197,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
               <h3 className={`font-bold text-gray-900 mb-6 ${
                 isMobileView ? 'text-xl' : 'text-2xl'
               }`}>
-                Get in Touch
+                {t('contact.form.heading')}
               </h3>
               <form className="space-y-6">
                 <div className={`grid gap-6 ${
@@ -205,7 +207,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     <label htmlFor="firstName" className={`block font-medium text-gray-700 mb-2 ${
                       isMobileView ? 'text-sm' : 'text-sm'
                     }`}>
-                      First Name
+                      {t('contact.form.firstName')}
                     </label>
                     <input
                       type="text"
@@ -213,14 +215,14 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                       className={`w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 ${
                         isMobileView ? 'px-3 py-2 text-sm' : 'px-4 py-3'
                       }`}
-                      placeholder="Your first name"
+                      placeholder={t('contact.form.firstNamePlaceholder')}
                     />
                   </div>
                   <div>
                     <label htmlFor="lastName" className={`block font-medium text-gray-700 mb-2 ${
                       isMobileView ? 'text-sm' : 'text-sm'
                     }`}>
-                      Last Name
+                      {t('contact.form.lastName')}
                     </label>
                     <input
                       type="text"
@@ -228,7 +230,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                       className={`w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 ${
                         isMobileView ? 'px-3 py-2 text-sm' : 'px-4 py-3'
                       }`}
-                      placeholder="Your last name"
+                      placeholder={t('contact.form.lastNamePlaceholder')}
                     />
                   </div>
                 </div>
@@ -236,7 +238,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                   <label htmlFor="email" className={`block font-medium text-gray-700 mb-2 ${
                     isMobileView ? 'text-sm' : 'text-sm'
                   }`}>
-                    Email
+                    {t('contact.form.emailLabel')}
                   </label>
                   <input
                     type="email"
@@ -244,14 +246,14 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     className={`w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 ${
                       isMobileView ? 'px-3 py-2 text-sm' : 'px-4 py-3'
                     }`}
-                    placeholder="your@email.com"
+                    placeholder={t('contact.form.emailPlaceholder')}
                   />
                 </div>
                 <div>
                   <label htmlFor="message" className={`block font-medium text-gray-700 mb-2 ${
                     isMobileView ? 'text-sm' : 'text-sm'
                   }`}>
-                    Message
+                    {t('contact.form.message')}
                   </label>
                   <textarea
                     id="message"
@@ -259,7 +261,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     className={`w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 ${
                       isMobileView ? 'px-3 py-2 text-sm' : 'px-4 py-3'
                     }`}
-                    placeholder="Tell us how we can help you..."
+                    placeholder={t('contact.form.messagePlaceholder')}
                   ></textarea>
                 </div>
                 <button
@@ -268,7 +270,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     isMobileView ? 'py-2 text-sm' : 'py-3'
                   }`}
                 >
-                  Send Message
+                  {t('contact.form.send')}
                 </button>
               </form>
             </div>
@@ -283,7 +285,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
         isMobileView ? "text-xl" : "text-2xl"
       }`}
     >
-      Find Us on Map
+      {t('contact.map.heading')}
     </h3>
     <div className="relative">
       <iframe
@@ -327,7 +329,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
           }
           className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg text-sm"
         >
-          Get Directions
+          {t('contact.map.directions')}
         </button>
       </div>
     </div>
@@ -340,22 +342,22 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
     >
       <div className="text-center bg-white rounded-lg p-4">
         <div className="text-red-600 font-semibold text-sm mb-1">
-          Distance from VSU
+          {t('contact.quickInfo.distance')}
         </div>
-        <div className="text-gray-900 font-bold">2.5 miles</div>
-        <div className="text-gray-500 text-xs">5 min drive</div>
+        <div className="text-gray-900 font-bold">{t('contact.quickInfo.distanceVal')}</div>
+        <div className="text-gray-500 text-xs">{t('contact.quickInfo.distanceDesc')}</div>
       </div>
       <div className="text-center bg-white rounded-lg p-4">
-        <div className="text-red-600 font-semibold text-sm mb-1">Parking</div>
-        <div className="text-gray-900 font-bold">Free</div>
-        <div className="text-gray-500 text-xs">Ample space</div>
+        <div className="text-red-600 font-semibold text-sm mb-1">{t('contact.quickInfo.parking')}</div>
+        <div className="text-gray-900 font-bold">{t('contact.quickInfo.parkingVal')}</div>
+        <div className="text-gray-500 text-xs">{t('contact.quickInfo.parkingDesc')}</div>
       </div>
       <div className="text-center bg-white rounded-lg p-4">
         <div className="text-red-600 font-semibold text-sm mb-1">
-          Accessibility
+          {t('contact.quickInfo.accessibility')}
         </div>
-        <div className="text-gray-900 font-bold">Wheelchair</div>
-        <div className="text-gray-500 text-xs">Accessible</div>
+        <div className="text-gray-900 font-bold">{t('contact.quickInfo.accessibilityVal')}</div>
+        <div className="text-gray-500 text-xs">{t('contact.quickInfo.accessibilityDesc')}</div>
       </div>
     </div>
   </div>
@@ -369,7 +371,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
               <h3 className={`font-bold text-gray-900 mb-4 ${
                 isMobileView ? 'text-2xl' : 'text-3xl'
               }`}>
-                What Our Customers Say
+                {t('contact.reviews.heading')}
               </h3>
               <div className="flex items-center justify-center space-x-2 mb-4">
                 <div className="flex space-x-1">
@@ -383,9 +385,9 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     </svg>
                   ))}
                 </div>
-                <span className="text-gray-600 font-medium">4.8 out of 5 stars</span>
+                <span className="text-gray-600 font-medium">{t('contact.reviews.rating')}</span>
               </div>
-              <p className="text-gray-500">Based on 550+ Google Reviews</p>
+              <p className="text-gray-500">{t('contact.reviews.based')}</p>
             </div>
 
             {/* Reviews Slider */}
@@ -441,7 +443,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
             {/* Call to Action */}
             <div className="text-center mt-8 pt-6 border-t border-gray-200">
               <p className="text-gray-600 mb-4">
-                Have you dined with us? We'd love to hear about your experience!
+                {t('contact.reviews.cta')}
               </p>
               <div className={`flex gap-4 justify-center ${
                 isMobileView ? 'flex-col items-center' : 'flex-row'
@@ -454,7 +456,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     isMobileView ? 'px-6 py-2 text-sm w-full max-w-xs' : 'px-6 py-3'
                   }`}
                 >
-                  📝 Write a Review
+                  {t('contact.reviews.writeReview')}
                 </a>
                 <a
                   href="https://www.google.com/maps/place/Stone+Pho/@30.8324,-83.2784,17z"
@@ -464,7 +466,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
                     isMobileView ? 'px-6 py-2 text-sm w-full max-w-xs' : 'px-6 py-3'
                   }`}
                 >
-                  ⭐ View All Reviews
+                  {t('contact.reviews.viewAll')}
                 </a>
               </div>
             </div>

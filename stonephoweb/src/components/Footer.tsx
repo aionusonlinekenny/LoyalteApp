@@ -2,6 +2,7 @@ import React from 'react';
 import { Utensils, Heart } from 'lucide-react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import ScrollAnimatedSection from './ScrollAnimatedSection';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface FooterProps {
   deviceInfo: DeviceInfo;
@@ -9,6 +10,7 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
+  const { t } = useLanguage();
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobileView = currentDevice === 'mobile';
 
@@ -46,9 +48,7 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
                   isMobileView ? 'text-sm' : ''
                 }`}
               >
-                Authentic Vietnamese cuisine with 48-hour simmered broths and
-                traditional recipes. Experience the true taste of Vietnam at
-                Stone Pho.
+                {t('footer.description')}
               </p>
               <p className={`${isMobileView ? 'text-sm' : ''}`}>
                 1525 Baytree Rd, #M
@@ -64,7 +64,7 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
                   isMobileView ? 'text-base' : 'text-lg'
                 }`}
               >
-                Quick Links
+                {t('footer.quickLinks')}
               </h3>
               <ul className="space-y-2">
                 <li>
@@ -127,7 +127,7 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
                   isMobileView ? 'text-base' : 'text-lg'
                 }`}
               >
-                Contact
+                {t('footer.contactLabel')}
               </h3>
               <ul
                 className={`space-y-2 ${
@@ -137,15 +137,15 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
                 <li>(229) 491-9905</li>
                 <li>stonephovaldosta@gmail.com</li>
                 <li className="pt-2">
-                  <strong className="text-black">Hours:</strong>
+                  <strong className="text-black">{t('footer.hoursLabel')}</strong>
                   <br />
-                  Mon: 11:00 AM - 7:00 PM
+                  {t('footer.hoursData.mon')}
                   <br />
-                  Tue: WE CLOSED
+                  {t('footer.hoursData.tue')}
                   <br />
-                  Wed - Sat: 11:00 AM - 8:45 PM
+                  {t('footer.hoursData.wedSat')}
                   <br />
-                  Sunday: 11:00 AM - 6:00 PM
+                  {t('footer.hoursData.sun')}
                 </li>
               </ul>
             </div>
@@ -161,7 +161,7 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
             }`}
           >
             <p className={`${isMobileView ? 'text-xs' : 'text-sm'}`}>
-              © 2024 Stone Pho. All rights reserved.
+              {t('footer.copyright')}
             </p>
             <div
               className={`flex items-center space-x-1 ${
@@ -172,7 +172,7 @@ const Footer: React.FC<FooterProps> = ({ deviceInfo, forcedDevice }) => {
             >
               <span>Made with</span>
               <Heart className="w-4 h-4 text-red-500" />
-              <span>for pho lovers</span>
+              <span>{t('footer.tagline')}</span>
             </div>
           </div>
         </ScrollAnimatedSection>

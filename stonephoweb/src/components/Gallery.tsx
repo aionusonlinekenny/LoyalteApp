@@ -2,6 +2,7 @@ import React from 'react';
 import { useState } from 'react';
 import { DeviceInfo } from '../hooks/useDeviceDetection';
 import ScrollAnimatedSection from './ScrollAnimatedSection';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface GalleryProps {
   deviceInfo: DeviceInfo;
@@ -9,6 +10,7 @@ interface GalleryProps {
 }
 
 const Gallery: React.FC<GalleryProps> = ({ deviceInfo, forcedDevice }) => {
+  const { t } = useLanguage();
   const currentDevice = forcedDevice || deviceInfo.deviceType;
   const isMobileView = currentDevice === 'mobile';
   const isTabletView = currentDevice === 'tablet';
@@ -89,12 +91,12 @@ const Gallery: React.FC<GalleryProps> = ({ deviceInfo, forcedDevice }) => {
             <h2 className={`font-bold text-gray-900 mb-4 ${
               isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'
             }`}>
-              Gallery
+              {t('gallery.heading')}
             </h2>
             <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${
               isMobileView ? 'text-lg' : 'text-xl'
             }`}>
-              Step into our world through these moments that capture the essence of Stone Pho.
+              {t('gallery.subtitle')}
             </p>
           </div>
         </ScrollAnimatedSection>
@@ -139,7 +141,7 @@ const Gallery: React.FC<GalleryProps> = ({ deviceInfo, forcedDevice }) => {
             <button className={`bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${
               isMobileView ? 'px-6 py-2 text-sm' : 'px-8 py-3'
             }`}>
-              View More Photos
+              {t('gallery.viewMore')}
             </button>
           </div>
         </ScrollAnimatedSection>
