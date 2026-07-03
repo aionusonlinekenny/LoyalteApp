@@ -12,6 +12,7 @@ interface Slide {
   type: "main" | "reviews" | "special" | "memorial";
   title?: string;
   subtitle?: string;
+  hours?: string;
   buttonText?: string;
   buttonLink?: string;
   reviews?: Review[];
@@ -23,6 +24,7 @@ const slides: Slide[] = [
     type: "memorial",
     title: "Happy July 4th",
     subtitle: "Celebrating freedom with bold flavors and great company.",
+    hours: "Open as usual · 11:00 AM – 7:00 PM",
   },
   {
     id: "main-1",
@@ -167,6 +169,21 @@ const Hero: React.FC = () => {
                     <span style={{ color: "#DC2626", fontSize: "1.25rem", lineHeight: 1 }}>★</span>
                     <div className="flex-1 h-px bg-white/70"></div>
                   </div>
+
+                  {/* Hours */}
+                  {slide.hours && (
+                    <p
+                      className="text-white mt-5 drop-shadow-lg"
+                      style={{
+                        fontSize: "clamp(0.9rem, 2.5vw, 1.2rem)",
+                        fontFamily: "Georgia, 'Times New Roman', serif",
+                        textShadow: "0 2px 8px rgba(0,0,0,0.7)",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {slide.hours}
+                    </p>
+                  )}
                 </div>
               )}
 
