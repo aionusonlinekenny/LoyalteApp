@@ -6,6 +6,7 @@ import HeroBackgroundManager from './HeroBackgroundManager';
 interface MenuItem {
   id: string;
   name: string;
+  name_es?: string;
   price: string;
   description: string;
   category: string;
@@ -31,7 +32,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({});
   const [isAddingItem, setIsAddingItem] = useState(false);
+  const [newItemTranslating, setNewItemTranslating] = useState(false);
   const [newCategory, setNewCategory] = useState('');
+
+  const autoTranslateNewItem = async () => {
+    if (!newItem.name) return;
+    setNewItemTranslating(true);
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(newItem.name)}&langpair=en|es`
+      );
+      const data = await res.json();
+      const translated = data?.responseData?.translatedText;
+      if (translated) setNewItem(prev => ({ ...prev, name_es: translated }));
+    } catch {}
+    setNewItemTranslating(false);
+  };
   
   // Gallery states
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
@@ -502,6 +518,23 @@ const handleMaintenanceToggle = async () => {
                         className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       />
                     </div>
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        type="text"
+                        placeholder="Spanish name (Tên tiếng Tây Ban Nha)"
+                        value={newItem.name_es || ''}
+                        onChange={(e) => setNewItem({ ...newItem, name_es: e.target.value })}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={autoTranslateNewItem}
+                        disabled={newItemTranslating}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap"
+                      >
+                        {newItemTranslating ? 'Translating…' : '🌐 Auto Translate'}
+                      </button>
+                    </div>
                     <textarea
                       placeholder="Description"
                       value={newItem.description || ''}
@@ -509,7 +542,7 @@ const handleMaintenanceToggle = async () => {
                       rows={3}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
                     />
-                    
+
                     {/* Image Upload */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -957,6 +990,21 @@ const EditItemForm: React.FC<{
   onCancel: () => void;
 }> = ({ item, categories, onSave, onCancel }) => {
   const [editedItem, setEditedItem] = useState<Partial<MenuItem>>(item);
+  const [translating, setTranslating] = useState(false);
+
+  const autoTranslateName = async () => {
+    if (!editedItem.name) return;
+    setTranslating(true);
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(editedItem.name)}&langpair=en|es`
+      );
+      const data = await res.json();
+      const translated = data?.responseData?.translatedText;
+      if (translated) setEditedItem(prev => ({ ...prev, name_es: translated }));
+    } catch {}
+    setTranslating(false);
+  };
 
   const getCategoryDisplayName = (category: string) => {
     const names: { [key: string]: string } = {
@@ -975,6 +1023,7 @@ const EditItemForm: React.FC<{
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input
           type="text"
+          placeholder="Item name (English)"
           value={editedItem.name || ''}
           onChange={(e) => setEditedItem({ ...editedItem, name: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -985,6 +1034,23 @@ const EditItemForm: React.FC<{
           onChange={(e) => setEditedItem({ ...editedItem, price: e.target.value })}
           className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent"
         />
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder="Spanish name (Tên tiếng Tây Ban Nha)"
+          value={editedItem.name_es || ''}
+          onChange={(e) => setEditedItem({ ...editedItem, name_es: e.target.value })}
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <button
+          type="button"
+          onClick={autoTranslateName}
+          disabled={translating}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap"
+        >
+          {translating ? 'Translating…' : '🌐 Auto Translate'}
+        </button>
       </div>
       <textarea
         value={editedItem.description || ''}

@@ -9,7 +9,7 @@ interface MenuProps {
 }
 
 const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [activeCategory, setActiveCategory] = useState('pho');
   const [categories, setCategories] = useState<string[]>(['appetizers', 'pho', 'vermicelli', 'specialty', 'rice', 'beverages']);
 
@@ -136,7 +136,7 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
                 {/* Tên và giá */}
                 <div className="flex justify-between items-start mb-3">
                   <h3 className={`font-bold text-gray-900 ${isMobileView ? 'text-lg' : 'text-xl'}`}>
-                    {item.name}
+                    {lang === 'es' && item.name_es ? item.name_es : item.name}
                   </h3>
                   <span className={`font-bold text-red-600 ${isMobileView ? 'text-lg' : 'text-xl'}`}>
                     {item.price}
