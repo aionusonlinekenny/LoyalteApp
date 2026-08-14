@@ -3,12 +3,12 @@ const es = {
     home: 'Inicio',
     about: 'Nosotros',
     menu: 'Menú',
-    orderOnline: 'Ordenar en Línea',
+    orderOnline: 'En Línea',
     gallery: 'Galería',
     contact: 'Contacto',
     rewards: '⭐ Recompensas',
     myAccount: '👤 Mi Cuenta',
-    orderDelivery: 'Pedir a Domicilio',
+    orderDelivery: 'A Domicilio',
   },
   hero: {
     holiday: {
@@ -20,7 +20,7 @@ const es = {
       title: 'Cocina Vietnamita Auténtica',
       subtitle: 'Descubre los sabores de Vietnam en Valdosta',
       orderNow: 'Ordenar Ahora',
-      orderDelivery: 'Pedir a Domicilio',
+      orderDelivery: 'A Domicilio',
     },
     reviews: {
       heading: 'Lo que Dicen Nuestros Clientes',

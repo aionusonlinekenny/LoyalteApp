@@ -71,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <img 
               src={headerSettings.logo} 
               alt={`${headerSettings.siteName} Logo`} 
@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className={`${isMobileView ? 'hidden' : 'hidden md:flex'} items-center space-x-8`}>
+          <nav className={`${isMobileView ? 'hidden' : 'hidden md:flex'} items-center space-x-4 text-sm`}>
             {regularMenuItems.map((item) => (
               <a
                 key={item.id}
@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
               <button
                 key={item.id}
                 onClick={() => item.isExternal ? window.open(item.href, '_blank') : window.location.href = item.href}
-                className={`px-4 py-2 rounded-full font-medium transition-all duration-300 ${
+                className={`px-4 py-2 rounded-full font-medium transition-all duration-300 whitespace-nowrap ${
                   item.buttonStyle === 'success' ? 'bg-green-600 hover:bg-green-700 text-white' :
                   item.buttonStyle === 'secondary' ? 'bg-gray-600 hover:bg-gray-700 text-white' :
                   'bg-orange-600 hover:bg-orange-700 text-white'
