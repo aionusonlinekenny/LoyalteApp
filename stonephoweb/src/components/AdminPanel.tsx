@@ -40,7 +40,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     setNewItemTranslating(true);
     try {
       const res = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(newItem.name)}&langpair=en|es`
+        `/api/translate.php?q=${encodeURIComponent(newItem.name)}&langpair=en|es`
       );
       const data = await res.json();
       const translated = data?.responseData?.translatedText;
@@ -997,7 +997,7 @@ const EditItemForm: React.FC<{
     setTranslating(true);
     try {
       const res = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(editedItem.name)}&langpair=en|es`
+        `/api/translate.php?q=${encodeURIComponent(editedItem.name)}&langpair=en|es`
       );
       const data = await res.json();
       const translated = data?.responseData?.translatedText;
