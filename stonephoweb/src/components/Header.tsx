@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center h-16 gap-4">
           {/* Logo */}
           <div className="flex items-center space-x-2 flex-shrink-0">
             <img 
@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ deviceInfo, forcedDevice }) => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className={`${isMobileView ? 'hidden' : 'hidden md:flex'} items-center space-x-4 text-sm`}>
+          <nav className={`${isMobileView ? 'hidden' : 'hidden md:flex'} items-center gap-3 text-sm flex-1 justify-end overflow-hidden`}>
             {regularMenuItems.map((item) => (
               <a
                 key={item.id}
