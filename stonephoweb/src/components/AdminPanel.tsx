@@ -43,7 +43,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
         `/api/translate.php?q=${encodeURIComponent(newItem.name)}&langpair=en|es`
       );
       const data = await res.json();
-      const translated = data?.responseData?.translatedText;
+      const translated = data?.data?.responseData?.translatedText;
       if (translated) setNewItem(prev => ({ ...prev, name_es: translated }));
     } catch {}
     setNewItemTranslating(false);
@@ -1000,7 +1000,7 @@ const EditItemForm: React.FC<{
         `/api/translate.php?q=${encodeURIComponent(editedItem.name)}&langpair=en|es`
       );
       const data = await res.json();
-      const translated = data?.responseData?.translatedText;
+      const translated = data?.data?.responseData?.translatedText;
       if (translated) setEditedItem(prev => ({ ...prev, name_es: translated }));
     } catch {}
     setTranslating(false);
