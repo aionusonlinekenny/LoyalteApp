@@ -49,16 +49,16 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
 	}
 	
   return (
-    <section id="contact" className="py-20 bg-white">
+    <section id="contact" className="py-20 bg-lux-elevated">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollAnimatedSection animation="fadeInUp" className="text-center mb-16">
           <div>
-            <h2 className={`font-bold text-gray-900 mb-4 ${
+            <h2 className={`font-display font-bold text-lux-cream mb-4 ${
               isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'
             }`}>
               {t('contact.heading')}
             </h2>
-            <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${
+            <p className={`text-lux-muted max-w-3xl mx-auto leading-relaxed ${
               isMobileView ? 'text-lg' : 'text-xl'
             }`}>
               {t('contact.subtitle')}
@@ -73,18 +73,16 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
           <ScrollAnimatedSection animation="fadeInLeft" delay={200} className="space-y-8">
           <div>
             <div className="flex items-start space-x-4">
-              <div className={`bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isMobileView ? 'w-10 h-10' : 'w-12 h-12'
-              }`}>
-                <MapPin className={`text-red-600 ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
+              <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobileView ? 'w-10 h-10' : 'w-12 h-12'}`} style={{background:'rgba(201,169,110,0.1)',border:'1px solid rgba(201,169,110,0.2)'}}>
+                <MapPin className={`text-lux-gold ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
               </div>
               <div>
-                <h3 className={`font-bold text-gray-900 mb-2 ${
+                <h3 className={`font-bold text-lux-cream mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
                   {t('contact.location')}
                 </h3>
-                <p className={`text-gray-600 leading-relaxed ${
+                <p className={`text-lux-muted leading-relaxed ${
                   isMobileView ? 'text-sm' : ''
                 }`}>
                   1525 Baytree Rd, #M<br />
@@ -94,13 +92,11 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
             </div>
 
             <div className="flex items-start space-x-4">
-              <div className={`bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isMobileView ? 'w-10 h-10' : 'w-12 h-12'
-              }`}>
-                <Phone className={`text-red-600 ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
+              <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobileView ? 'w-10 h-10' : 'w-12 h-12'}`} style={{background:'rgba(201,169,110,0.1)',border:'1px solid rgba(201,169,110,0.2)'}}>
+                <Phone className={`text-lux-gold ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
               </div>
               <div>
-                <h3 className={`font-bold text-gray-900 mb-2 ${
+                <h3 className={`font-bold text-lux-cream mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
                   {t('contact.phone')}
@@ -112,13 +108,11 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
             </div>
 
             <div className="flex items-start space-x-4">
-              <div className={`bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isMobileView ? 'w-10 h-10' : 'w-12 h-12'
-              }`}>
-                <Mail className={`text-red-600 ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
+              <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobileView ? 'w-10 h-10' : 'w-12 h-12'}`} style={{background:'rgba(201,169,110,0.1)',border:'1px solid rgba(201,169,110,0.2)'}}>
+                <Mail className={`text-lux-gold ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
               </div>
               <div>
-                <h3 className={`font-bold text-gray-900 mb-2 ${
+                <h3 className={`font-bold text-lux-cream mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
                   {t('contact.email')}
@@ -130,13 +124,11 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
             </div>
 
             <div className="flex items-start space-x-4">
-              <div className={`bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isMobileView ? 'w-10 h-10' : 'w-12 h-12'
-              }`}>
-                <Clock className={`text-red-600 ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
+              <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobileView ? 'w-10 h-10' : 'w-12 h-12'}`} style={{background:'rgba(201,169,110,0.1)',border:'1px solid rgba(201,169,110,0.2)'}}>
+                <Clock className={`text-lux-gold ${isMobileView ? 'w-5 h-5' : 'w-6 h-6'}`} />
               </div>
               <div>
-                <h3 className={`font-bold text-gray-900 mb-2 ${
+                <h3 className={`font-bold text-lux-cream mb-2 ${
                   isMobileView ? 'text-lg' : 'text-xl'
                 }`}>
                   {t('contact.hours')}
@@ -154,7 +146,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
 
             {/* Social Media */}
             <div className="pt-8">
-              <h3 className={`font-bold text-gray-900 mb-4 ${
+              <h3 className={`font-display font-bold text-lux-cream mb-4 ${
                 isMobileView ? 'text-lg' : 'text-xl'
               }`}>
                 {t('contact.followUs')}
@@ -191,9 +183,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
 
           {/* Contact Form */}
           <ScrollAnimatedSection animation="fadeInRight" delay={400}>
-            <div className={`bg-gray-50 rounded-2xl ${
-              isMobileView ? 'p-6' : 'p-8'
-            }`}>
+            <div className={`rounded-2xl ${isMobileView ? 'p-6' : 'p-8'}`} style={{background:'#1A1714',border:'1px solid #2A2520'}}>
               <h3 className={`font-bold text-gray-900 mb-6 ${
                 isMobileView ? 'text-xl' : 'text-2xl'
               }`}>
@@ -279,7 +269,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
 
         {/* Google Map */}
 <ScrollAnimatedSection animation="fadeInUp" delay={600} className="mt-16">
-  <div className="bg-gray-50 rounded-2xl p-6 overflow-hidden">
+  <div className="rounded-2xl p-6 overflow-hidden" style={{background:'#1A1714',border:'1px solid #2A2520'}}>
     <h3
       className={`font-bold text-gray-900 mb-6 text-center ${
         isMobileView ? "text-xl" : "text-2xl"
@@ -303,15 +293,15 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
       {/* Map overlay with address */}
       <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg max-w-xs z-10">
         <div className="flex items-start space-x-2">
-          <MapPin className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <MapPin className="w-5 h-5 text-lux-gold flex-shrink-0 mt-0.5" />
           <div>
             <h4 className="font-semibold text-gray-900 text-sm">Stone Pho</h4>
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-lux-muted leading-relaxed">
               1525 Baytree Rd, #M
               <br />
               Valdosta, GA 31602
             </p>
-            <p className="text-xs text-red-600 font-medium mt-1">
+            <p className="text-xs text-lux-gold font-medium mt-1">
               (229) 491-9905
             </p>
           </div>
@@ -341,19 +331,19 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
       }`}
     >
       <div className="text-center bg-white rounded-lg p-4">
-        <div className="text-red-600 font-semibold text-sm mb-1">
+        <div className="text-lux-gold font-semibold text-sm mb-1">
           {t('contact.quickInfo.distance')}
         </div>
         <div className="text-gray-900 font-bold">{t('contact.quickInfo.distanceVal')}</div>
         <div className="text-gray-500 text-xs">{t('contact.quickInfo.distanceDesc')}</div>
       </div>
       <div className="text-center bg-white rounded-lg p-4">
-        <div className="text-red-600 font-semibold text-sm mb-1">{t('contact.quickInfo.parking')}</div>
+        <div className="text-lux-gold font-semibold text-sm mb-1">{t('contact.quickInfo.parking')}</div>
         <div className="text-gray-900 font-bold">{t('contact.quickInfo.parkingVal')}</div>
         <div className="text-gray-500 text-xs">{t('contact.quickInfo.parkingDesc')}</div>
       </div>
       <div className="text-center bg-white rounded-lg p-4">
-        <div className="text-red-600 font-semibold text-sm mb-1">
+        <div className="text-lux-gold font-semibold text-sm mb-1">
           {t('contact.quickInfo.accessibility')}
         </div>
         <div className="text-gray-900 font-bold">{t('contact.quickInfo.accessibilityVal')}</div>
@@ -368,7 +358,7 @@ const Contact: React.FC<ContactProps> = ({ deviceInfo, forcedDevice }) => {
         <ScrollAnimatedSection animation="fadeInUp" delay={800} className="mt-16">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="text-center mb-8">
-              <h3 className={`font-bold text-gray-900 mb-4 ${
+              <h3 className={`font-display font-bold text-lux-cream mb-4 ${
                 isMobileView ? 'text-2xl' : 'text-3xl'
               }`}>
                 {t('contact.reviews.heading')}

@@ -78,21 +78,33 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
 
   return (
     <section
-	  id="menu"
-	  className="relative py-20 bg-cover bg-center"
-	  style={{
-		backgroundImage: "url('/uploads/menu-bg.png')", // ảnh nền bạn để trong /uploads
-	  }}
-	>
-	  {/* Overlay để làm mờ / blend màu */}
-	  <div className="absolute inset-0 bg-white/90"></div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      id="menu"
+      className="relative py-20 bg-cover bg-center"
+      style={{ backgroundImage: "url('/uploads/menu-bg.png')" }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0" style={{ background: 'rgba(10,8,6,0.93)' }} />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollAnimatedSection animation="fadeInUp" className="text-center mb-16">
           <div>
-            <h2 className={`font-bold text-gray-900 mb-4 ${isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'}`}>
+            <span style={{
+              display: 'block',
+              fontFamily: "'Inter',sans-serif",
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              letterSpacing: '0.25em',
+              textTransform: 'uppercase',
+              color: '#C9A96E',
+              marginBottom: '1rem',
+            }}>What We Serve</span>
+            <h2
+              className={`font-display text-lux-cream mb-4 ${isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'}`}
+              style={{ fontWeight: 700, lineHeight: 1 }}
+            >
               {t('menu.heading')}
             </h2>
-            <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${isMobileView ? 'text-lg' : 'text-xl'}`}>
+            <span className="gold-line" style={{ maxWidth: '60px', margin: '0 auto 1.25rem' }} />
+            <p className={`text-lux-muted max-w-3xl mx-auto leading-relaxed ${isMobileView ? 'text-base' : 'text-lg'}`}>
               {t('menu.subtitle')}
             </p>
           </div>
@@ -101,14 +113,33 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
         {/* Category Tabs */}
         <ScrollAnimatedSection animation="fadeInUp" delay={500} className="flex justify-center mb-12">
           <div>
-            <div className={`bg-gray-100 rounded-full p-1 ${isMobileView ? 'flex-col space-y-1 w-full max-w-xs' : 'inline-flex'}`}>
+            <div className={`flex gap-1 ${isMobileView ? 'flex-col w-full max-w-xs' : 'flex-row'}`}
+              style={{ border: '1px solid #2A2520', padding: '4px' }}
+            >
               {displayCategories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
-                  className={`rounded-full font-semibold transition-all duration-300 hover:scale-105 ${
-                    isMobileView ? 'px-4 py-2 text-sm w-full' : 'px-6 py-3'
-                  } ${activeCategory === category.id ? 'bg-orange-600 text-white shadow-lg' : 'text-gray-600 hover:text-red-600'}`}
+                  className={`font-semibold transition-all duration-300 ${isMobileView ? 'px-4 py-2 text-sm w-full' : 'px-5 py-2.5 text-sm'}`}
+                  style={{
+                    background: activeCategory === category.id ? '#C9A96E' : 'transparent',
+                    color: activeCategory === category.id ? '#0F0D0B' : '#7A6E64',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Inter',sans-serif",
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    if (activeCategory !== category.id)
+                      (e.currentTarget as HTMLElement).style.color = '#C9A96E';
+                  }}
+                  onMouseLeave={e => {
+                    if (activeCategory !== category.id)
+                      (e.currentTarget as HTMLElement).style.color = '#7A6E64';
+                  }}
                 >
                   {category.name}
                 </button>
@@ -118,47 +149,53 @@ const Menu: React.FC<MenuProps> = ({ deviceInfo, forcedDevice }) => {
         </ScrollAnimatedSection>
 
         {/* Menu Items */}
-        <div className={`grid gap-6 ${isMobileView ? 'grid-cols-1' : isTabletView ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+        <div className={`grid gap-5 ${isMobileView ? 'grid-cols-1' : isTabletView ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
           {menuItems[activeCategory as keyof typeof menuItems]?.map((item: any, index: number) => (
             <ScrollAnimatedSection key={index} animation="scaleIn" delay={index * 100}>
-              <div className={`relative bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-300 hover:bg-white border border-transparent hover:border-red-200 overflow-hidden ${isMobileView ? 'p-4' : 'p-6'}`}>
+              <div
+                className={`relative overflow-hidden transition-all duration-300 ${isMobileView ? 'p-0' : 'p-0'}`}
+                style={{
+                  background: '#1A1714',
+                  border: '1px solid #2A2520',
+                  transition: 'border-color 0.25s ease',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#C9A96E44')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = '#2A2520')}
+              >
                 
-                {/* ✅ Hình ảnh từ JSON */}
-                <div className="mb-4 -mx-4 -mt-4 md:-mx-6 md:-mt-6">
+                {/* Image */}
+                <div style={{ overflow: 'hidden' }}>
                   <img
                     src={item.image ? item.image : "/uploads/menu/default-placeholder.jpg"}
                     alt={item.name}
-                    className="w-full h-32 object-cover rounded-t-2xl"
+                    className="w-full object-cover transition-transform duration-500 hover:scale-105"
+                    style={{ height: '180px' }}
                   />
-                  
                 </div>
 
-                {/* Tên và giá */}
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className={`font-bold text-gray-900 ${isMobileView ? 'text-lg' : 'text-xl'}`}>
-                    {lang === 'es' && item.name_es ? item.name_es : item.name}
-                  </h3>
-                  <span className={`font-bold text-red-600 ${isMobileView ? 'text-lg' : 'text-xl'}`}>
-                    {item.price}
-                  </span>
+                {/* Body */}
+                <div style={{ padding: isMobileView ? '1rem' : '1.25rem' }}>
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <h3
+                      className="font-display text-lux-cream"
+                      style={{ fontWeight: 700, fontSize: isMobileView ? '1.05rem' : '1.15rem', lineHeight: 1.2 }}
+                    >
+                      {lang === 'es' && item.name_es ? item.name_es : item.name}
+                    </h3>
+                    <span
+                      className="font-display text-lux-gold flex-shrink-0"
+                      style={{ fontWeight: 700, fontSize: isMobileView ? '1rem' : '1.1rem' }}
+                    >
+                      {item.price}
+                    </span>
+                  </div>
+                  <p
+                    className="text-lux-muted leading-relaxed"
+                    style={{ fontSize: isMobileView ? '0.78rem' : '0.82rem', whiteSpace: 'pre-line', minHeight: '4rem' }}
+                  >
+                    {item.description}
+                  </p>
                 </div>
-
-                {/* Mô tả */}
-                <p className={`text-gray-600 leading-relaxed ${isMobileView ? 'text-sm' : ''}`} style={{ whiteSpace: 'pre-line', minHeight: '4.5rem' }}>
-                  {item.description}
-                </p>
-
-                {/* Nút đặt hàng */}
-                {/*<div className="mt-4 flex gap-2">
-                  <button 
-                    onClick={() => window.open('https://www.clover.com/online-ordering/stone-pho-valdosta', '_blank')}
-                    className={`bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all duration-300 ${isMobileView ? 'px-3 py-1 text-xs flex-1' : 'px-4 py-2 text-sm flex-1'}`}>
-                    Order Now
-                  </button>
-                  <button className={`border border-red-600 text-red-600 hover:bg-orange-600 hover:text-white rounded-lg font-medium transition-all duration-300 ${isMobileView ? 'px-3 py-1 text-xs' : 'px-4 py-2 text-sm'}`}>
-                    ♡
-                  </button>
-                </div>*/}
               </div>
             </ScrollAnimatedSection>
           ))}

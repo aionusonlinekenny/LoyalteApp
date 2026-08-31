@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useScrollAnimation } from "../hooks/useScrollAnimation";
 
-interface Review {
-  name: string;
-  text: string;
-  date: string;
-}
-
+interface Review { name: string; text: string; date: string; }
 interface Slide {
   id: string;
   type: "main" | "reviews" | "special" | "memorial";
@@ -39,21 +35,9 @@ const slides: Slide[] = [
     id: "reviews-1",
     type: "reviews",
     reviews: [
-      {
-        name: "Sarah M.",
-        text: "Best pho I've had outside of Vietnam! The broth is so rich and flavorful.",
-        date: "2 days ago",
-      },
-      {
-        name: "James K.",
-        text: "The spring rolls are amazing! So fresh and delicious.",
-        date: "1 week ago",
-      },
-      {
-        name: "Emily R.",
-        text: "Finally, authentic Vietnamese food in Valdosta. Highly recommend!",
-        date: "3 weeks ago",
-      },
+      { name: "Sarah M.", text: "Best pho I've had outside of Vietnam! The broth is so rich and flavorful.", date: "2 days ago" },
+      { name: "James K.", text: "The spring rolls are amazing! So fresh and delicious.", date: "1 week ago" },
+      { name: "Emily R.", text: "Finally, authentic Vietnamese food in Valdosta. Highly recommend!", date: "3 weeks ago" },
     ],
   },
   {
@@ -66,233 +50,263 @@ const slides: Slide[] = [
   },
 ];
 
+/* ── Reusable outlined CTA button ──────────────────────────── */
+const HeroBtn: React.FC<{
+  href: string;
+  external?: boolean;
+  ghost?: boolean;
+  children: React.ReactNode;
+}> = ({ href, external, ghost, children }) => {
+  const [hov, setHov] = useState(false);
+  const gold = !ghost;
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "inline-block",
+        padding: "0.9rem 2.25rem",
+        border: `1px solid ${gold ? "#C9A96E" : "rgba(245,237,216,0.3)"}`,
+        color: hov
+          ? gold ? "#0F0D0B" : "#F5EDD8"
+          : gold ? "#C9A96E" : "rgba(245,237,216,0.65)",
+        background: hov
+          ? gold ? "#C9A96E" : "rgba(245,237,216,0.07)"
+          : "transparent",
+        fontFamily: "'Inter', sans-serif",
+        fontSize: "0.65rem",
+        fontWeight: 700,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        textDecoration: "none",
+        transition: "all 0.25s ease",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </a>
+  );
+};
+
+/* ── Hero ──────────────────────────────────────────────────── */
 const Hero: React.FC = () => {
   const { t } = useLanguage();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroBackground, setHeroBackground] = useState<string>("");
+  const { scrollY } = useScrollAnimation();
 
-  // Load hero background config
   useEffect(() => {
-    const loadHeroConfig = async () => {
+    (async () => {
       try {
         const res = await fetch("/api/hero-config.php");
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.data.heroBackground) {
+          if (data.success && data.data?.heroBackground)
             setHeroBackground(data.data.heroBackground);
-          }
         }
-      } catch (err) {
-        console.error("Failed to load hero background:", err);
-      }
-    };
-    loadHeroConfig();
+      } catch {}
+    })();
   }, []);
 
-  // Auto slide — memorial slide stays longer (9s), others 5s
   useEffect(() => {
     const duration = slides[currentSlide]?.type === "memorial" ? 9000 : 5000;
-    const timer = setTimeout(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, duration);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setCurrentSlide(p => (p + 1) % slides.length), duration);
+    return () => clearTimeout(t);
   }, [currentSlide]);
+
+  const eyebrow: React.CSSProperties = {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.62rem",
+    fontWeight: 700,
+    letterSpacing: "0.3em",
+    textTransform: "uppercase",
+    color: "#C9A96E",
+    marginBottom: "1.5rem",
+    display: "block",
+  };
+  const heading: React.CSSProperties = {
+    fontFamily: "'Cormorant Garamond', Georgia, serif",
+    fontWeight: 700,
+    lineHeight: 0.92,
+    color: "#F5EDD8",
+    textWrap: "balance" as any,
+    marginBottom: "1.25rem",
+  };
+  const sub: React.CSSProperties = {
+    fontFamily: "'Cormorant Garamond', Georgia, serif",
+    fontStyle: "italic",
+    color: "#7A6E64",
+    marginBottom: "2.75rem",
+    display: "block",
+  };
 
   return (
     <section
       id="hero"
-      className="relative w-full h-screen flex items-center justify-center text-center text-white overflow-hidden"
+      className="relative w-full h-screen flex items-center justify-center text-center overflow-hidden"
       style={{
         backgroundImage: heroBackground ? `url(${heroBackground})` : "none",
         backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundPosition: `center calc(50% + ${Math.min(scrollY * 0.2, 120)}px)`,
+        backgroundColor: "#0F0D0B",
       }}
     >
-      {/* Overlay - darker for memorial slide */}
+      {/* Dark overlay */}
       <div
         className="absolute inset-0 z-0 transition-colors duration-700"
         style={{
-          background:
-            slides[currentSlide]?.type === "memorial"
-              ? "rgba(15, 23, 60, 0.62)"
-              : "rgba(255,255,255,0.30)",
+          background: slides[currentSlide]?.type === "memorial"
+            ? "rgba(6,4,2,0.84)"
+            : "rgba(0,0,0,0.72)",
         }}
-      ></div>
+      />
+      {/* Subtle scanline texture */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.011) 3px,rgba(255,255,255,0.011) 4px)",
+        }}
+      />
 
-      {/* Slider wrapper */}
-      <div className="relative z-10 w-full h-full flex items-center justify-center">
-        <div className="relative w-full h-full overflow-hidden">
-          {slides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 flex flex-col items-center justify-center px-4 transition-opacity duration-700 ease-in-out ${
-                currentSlide === index ? "opacity-100 z-10" : "opacity-0 z-0"
-              }`}
-            >
-              {slide.type === "memorial" && (
-                <div className="flex flex-col items-center justify-center px-6 text-center">
-                  {/* Three stars */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <span style={{ color: "#DC2626", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
-                    <span style={{ color: "#E2E8F0", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
-                    <span style={{ color: "#3B82F6", fontSize: "2rem", lineHeight: 1, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>★</span>
-                  </div>
+      {/* ── SLIDES ── */}
+      <div className="relative z-10 w-full h-full">
+        {slides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`absolute inset-0 flex flex-col items-center justify-center px-6 transition-opacity duration-700 ${
+              currentSlide === index ? "opacity-100 z-10" : "opacity-0 z-0"
+            }`}
+          >
 
-                  {/* Title */}
-                  <h1
-                    className="font-bold text-white mb-6 drop-shadow-lg"
-                    style={{
-                      fontSize: "clamp(3rem, 10vw, 6rem)",
-                      fontFamily: "Georgia, 'Times New Roman', serif",
-                      letterSpacing: "-0.01em",
-                      textShadow: "0 4px 16px rgba(0,0,0,0.6)",
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    {t('hero.holiday.title')}
-                  </h1>
-
-                  {/* Subtitle */}
-                  <p
-                    className="text-white mb-8 drop-shadow-lg max-w-xl"
-                    style={{
-                      fontSize: "clamp(1rem, 3vw, 1.5rem)",
-                      fontStyle: "italic",
-                      fontFamily: "Georgia, 'Times New Roman', serif",
-                      textShadow: "0 2px 8px rgba(0,0,0,0.6)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {t('hero.holiday.subtitle')}
+            {/* MEMORIAL */}
+            {slide.type === "memorial" && (
+              <div className="flex flex-col items-center max-w-2xl">
+                <div className="flex gap-5 mb-8">
+                  {[["#DC2626","rgba(220,38,38,0.5)"],["#E2E8F0","transparent"],["#3B82F6","rgba(59,130,246,0.5)"]].map(([c, s], i) => (
+                    <span key={i} style={{ color: c, fontSize: "2rem", textShadow: `0 2px 14px ${s}` }}>★</span>
+                  ))}
+                </div>
+                <h1 style={{ ...heading, fontSize: "clamp(2.8rem,10vw,5.5rem)", textShadow: "0 4px 28px rgba(0,0,0,0.7)" }}>
+                  {t("hero.holiday.title")}
+                </h1>
+                <p style={{ ...sub, fontSize: "clamp(0.95rem,2.8vw,1.3rem)", marginBottom: "1.5rem" }}>
+                  {t("hero.holiday.subtitle")}
+                </p>
+                <div className="flex items-center gap-4 w-full max-w-xs mb-4">
+                  <span className="gold-line flex-1" />
+                  <span style={{ color: "#C9A96E", fontSize: "0.75rem" }}>★</span>
+                  <span className="gold-line flex-1" />
+                </div>
+                {slide.hours && (
+                  <p style={{ color: "#7A6E64", fontSize: "clamp(0.82rem,2vw,0.95rem)", letterSpacing: "0.08em" }}>
+                    {t("hero.holiday.hours")}
                   </p>
+                )}
+              </div>
+            )}
 
-                  {/* Divider with center star */}
-                  <div className="flex items-center justify-center gap-3 w-full max-w-sm">
-                    <div className="flex-1 h-px bg-white/70"></div>
-                    <span style={{ color: "#DC2626", fontSize: "1.25rem", lineHeight: 1 }}>★</span>
-                    <div className="flex-1 h-px bg-white/70"></div>
-                  </div>
+            {/* MAIN */}
+            {slide.type === "main" && (
+              <div className="max-w-3xl mx-auto">
+                <span style={eyebrow}>Valdosta · Georgia · Since 2019</span>
+                <h1 style={{ ...heading, fontSize: "clamp(2.8rem,9vw,6rem)" }}>
+                  {t("hero.main.title")}
+                </h1>
+                <span style={{ ...sub, fontSize: "clamp(1rem,2.5vw,1.35rem)" }}>
+                  {t("hero.main.subtitle")}
+                </span>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <HeroBtn href={slide.buttonLink!} external>{t("hero.main.orderNow")}</HeroBtn>
+                  <HeroBtn href="https://order.online/business/stone-pho-lp-14380597" external ghost>
+                    {t("hero.main.orderDelivery")}
+                  </HeroBtn>
+                </div>
+              </div>
+            )}
 
-                  {/* Hours */}
-                  {slide.hours && (
-                    <p
-                      className="text-white mt-5 drop-shadow-lg"
+            {/* REVIEWS */}
+            {slide.type === "reviews" && (
+              <div className="max-w-4xl mx-auto w-full">
+                <span style={eyebrow}>Customer Reviews</span>
+                <h2 style={{ ...heading, fontSize: "clamp(2rem,5vw,3.5rem)", marginBottom: "2rem" }}>
+                  {t("hero.reviews.heading")}
+                </h2>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-3 mb-8">
+                  {slide.reviews?.map((r, idx) => (
+                    <div
+                      key={idx}
                       style={{
-                        fontSize: "clamp(0.9rem, 2.5vw, 1.2rem)",
-                        fontFamily: "Georgia, 'Times New Roman', serif",
-                        textShadow: "0 2px 8px rgba(0,0,0,0.7)",
-                        letterSpacing: "0.04em",
+                        background: "rgba(255,255,255,0.04)",
+                        backdropFilter: "blur(16px)",
+                        border: "1px solid rgba(201,169,110,0.14)",
+                        padding: "1.25rem",
+                        textAlign: "left",
                       }}
                     >
-                      {t('hero.holiday.hours')}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {slide.type === "main" && (
-                <>
-                  <h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg">
-                    {t('hero.main.title')}
-                  </h1>
-                  <p className="text-lg md:text-2xl mb-8 drop-shadow-lg">
-                    {t('hero.main.subtitle')}
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    {slide.buttonText && (
-                      <a
-                        href={slide.buttonLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
-                      >
-                        {t('hero.main.orderNow')}
-                      </a>
-                    )}
-                    <a
-                      href="https://order.online/business/stone-pho-lp-14380597"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
-                    >
-                      {t('hero.main.orderDelivery')}
-                    </a>
-                  </div>
-                </>
-              )}
-
-              {slide.type === "reviews" && (
-                <div className="max-w-4xl mx-auto">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-8">
-                    {t('hero.reviews.heading')}
-                  </h2>
-                  <div className="grid gap-4 mb-8 max-w-4xl mx-auto grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-                    {slide.reviews?.map((review, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-left"
-                      >
-                        <div className="flex items-center mb-2">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className="w-4 h-4 text-yellow-400 fill-yellow-400"
-                            />
-                          ))}
-                        </div>
-                        <p className="text-sm mb-2">"{review.text}"</p>
-                        <p className="text-xs text-gray-300">
-                          — {review.name}, {review.date}
-                        </p>
+                      <div className="flex mb-3 gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 text-lux-gold fill-lux-gold" />
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <a
-                    href="https://www.google.com/search?q=stone+pho+valdosta"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
-                  >
-                    {t('hero.reviews.readMore')}
-                  </a>
+                      <p style={{ color: "#F5EDD8", fontSize: "0.8rem", lineHeight: 1.55, marginBottom: "0.75rem" }}>
+                        "{r.text}"
+                      </p>
+                      <p style={{ color: "#4A4540", fontSize: "0.7rem" }}>— {r.name}, {r.date}</p>
+                    </div>
+                  ))}
                 </div>
-              )}
+                <HeroBtn href="https://www.google.com/search?q=stone+pho+valdosta" external>
+                  {t("hero.reviews.readMore")}
+                </HeroBtn>
+              </div>
+            )}
 
-              {slide.type === "special" && (
-                <>
-                  <h2 className="text-3xl md:text-5xl font-bold mb-6 drop-shadow-lg">
-                    {slide.title}
-                  </h2>
-                  <p className="text-lg md:text-2xl mb-8 drop-shadow-lg">
-                    {slide.subtitle}
-                  </p>
-                  {slide.buttonText && (
-                    <a
-                      href={slide.buttonLink}
-                      className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105"
-                    >
-                      {slide.buttonText}
-                    </a>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Dots */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center space-x-2 z-20">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-colors ${
-              currentSlide === index ? "bg-white" : "bg-gray-400"
-            }`}
-          ></button>
+            {/* SPECIAL */}
+            {slide.type === "special" && (
+              <div className="max-w-3xl mx-auto">
+                <span style={eyebrow}>Chef's Signature</span>
+                <h2 style={{ ...heading, fontSize: "clamp(2.5rem,7vw,5rem)" }}>
+                  {t("hero.special.title")}
+                </h2>
+                <span style={{ ...sub, fontSize: "clamp(0.95rem,2.5vw,1.25rem)" }}>
+                  {t("hero.special.subtitle")}
+                </span>
+                <HeroBtn href={slide.buttonLink!}>{t("hero.special.viewMenu")}</HeroBtn>
+              </div>
+            )}
+          </div>
         ))}
       </div>
+
+      {/* ── SLIDE INDICATORS — line style ── */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentSlide(i)}
+            aria-label={`Slide ${i + 1}`}
+            style={{
+              width: i === currentSlide ? "2.5rem" : "0.6rem",
+              height: "2px",
+              background: i === currentSlide ? "#C9A96E" : "#3A3530",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              transition: "all 0.4s ease",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Scroll hint */}
+      <ChevronDown
+        className="absolute bottom-9 right-8 z-20 animate-bounce"
+        style={{ color: "#3A3530", width: "1.25rem", height: "1.25rem" }}
+      />
     </section>
   );
 };

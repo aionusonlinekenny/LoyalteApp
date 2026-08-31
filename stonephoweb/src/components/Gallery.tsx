@@ -84,16 +84,16 @@ const Gallery: React.FC<GalleryProps> = ({ deviceInfo, forcedDevice }) => {
   }, []);
 
   return (
-    <section id="gallery" className="py-20 bg-gray-50">
+    <section id="gallery" className="py-20 bg-lux-surface">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollAnimatedSection animation="fadeInUp" className="text-center mb-16">
           <div>
-            <h2 className={`font-bold text-gray-900 mb-4 ${
+            <h2 className={`font-display font-bold text-lux-cream mb-4 ${
               isMobileView ? 'text-3xl' : 'text-4xl sm:text-5xl'
             }`}>
               {t('gallery.heading')}
             </h2>
-            <p className={`text-gray-600 max-w-3xl mx-auto leading-relaxed ${
+            <p className={`text-lux-muted max-w-3xl mx-auto leading-relaxed ${
               isMobileView ? 'text-lg' : 'text-xl'
             }`}>
               {t('gallery.subtitle')}
@@ -138,9 +138,10 @@ const Gallery: React.FC<GalleryProps> = ({ deviceInfo, forcedDevice }) => {
 
         <ScrollAnimatedSection animation="fadeInUp" delay={600} className="text-center mt-12">
           <div>
-            <button className={`bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${
-              isMobileView ? 'px-6 py-2 text-sm' : 'px-8 py-3'
-            }`}>
+            <button
+              className="text-lux-gold font-semibold transition-all duration-300 transform hover:scale-105"
+              style={{border:'1px solid #C9A96E',padding:'0.75rem 2rem',background:'transparent',cursor:'pointer',fontFamily:"'Inter',sans-serif",fontSize:'0.7rem',letterSpacing:'0.18em',textTransform:'uppercase'}}
+            >
               {t('gallery.viewMore')}
             </button>
           </div>
